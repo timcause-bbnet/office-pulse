@@ -2117,13 +2117,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // Logic: If screen width > 768px (Non-mobile), skip map.
             const isDesktop = window.innerWidth > 768;
 
+            // Determine intention (In or Out?)
+            const todayStr = appState.formatDate(appState.currentDate);
+            let rec = appState.clockRecords[todayStr]?.[appState.currentUser.id];
+
+            // If checking intentionally, determine logic state
+            const isClockingOut = (rec && rec.in && !rec.out);
+            const isFinished = (rec && rec.out);
+
+            if (isFinished) {
+                alert("今日已完成上下班打卡！");
+                return;
+            }
+
             if (isDesktop) {
                 // Direct Clock In for Desktop
-                const todayStr = appState.formatDate(appState.currentDate);
-                let rec = appState.clockRecords[todayStr]?.[appState.currentUser.id];
-
-                // Toggle Logic
-                if (!rec || !rec.in) {
+                if (!isClockingOut) {
                     // Clock IN
                     const timeStr = appState.clockIn(appState.currentDate, appState.currentUser.id);
                     appState.addSegment(appState.currentDate, {
@@ -2140,16 +2149,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
                     btnClockAction.style.background = '#64748b';
                     alert(`電腦版打卡成功！時間: ${timeStr}`);
-                } else if (!rec.out) {
+                } else {
                     // Clock OUT
                     const timeStr = appState.clockOut(appState.currentDate, appState.currentUser.id);
-                    alert(`下班打卡成功！時間: ${timeStr}`);
                     document.getElementById('clock-status-text').textContent = "已下班";
-                    btnClockAction.innerHTML = '<i class="fa-solid fa-stopwatch"></i> 上班';
-                    btnClockAction.style.background = '#3b82f6';
-                    document.getElementById('clock-time-display').textContent = "--:--";
-                } else {
-                    alert("今日已完成上下班打卡！");
+                    document.getElementById('clock-status-text').style.color = "#64748b";
+                    document.getElementById('clock-time-display').textContent = `${rec.in} - ${timeStr}`; // Update to range
+                    btnClockAction.innerHTML = '<i class="fa-solid fa-check"></i> 完成';
+                    btnClockAction.disabled = true;
+                    btnClockAction.className = 'btn-secondary';
+                    btnClockAction.style.background = '';
+                    alert(`下班打卡成功！時間: ${timeStr}`);
                 }
 
                 renderCalendar();
@@ -2225,30 +2235,47 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmBtn.disabled = false;
                         confirmBtn.style.opacity = '1';
 
+                        // Update button text contextually
+                        confirmBtn.textContent = isClockingOut ? "📍 確認下班" : "📍 確認上班";
+
                         // Bind Confirm Action
                         confirmBtn.onclick = function () {
-                            appState.clockIn(appState.currentDate, appState.currentUser.id);
+                            // Re-evaluate state just in case, but local scope is safe enough
+                            if (!isClockingOut) {
+                                // CLOCK IN
+                                const tStr = appState.clockIn(appState.currentDate, appState.currentUser.id);
+                                appState.addSegment(appState.currentDate, {
+                                    type: 'office',
+                                    start: tStr,
+                                    end: '18:00',
+                                    isAllDay: false,
+                                    note: `打卡: ${matchedLoc.label}`
+                                });
 
-                            // UI Refresh Logic - Force Success Display
-                            const now = new Date();
-                            const timeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
+                                alert(`打卡成功！\n地點: ${matchedLoc.label}\n時間: ${tStr}`);
 
-                            // Force Add Segment to ensure it shows up immediately
-                            appState.addSegment(appState.currentDate, {
-                                type: 'office',
-                                start: timeStr,
-                                end: '18:00',
-                                isAllDay: false,
-                                note: `打卡: ${matchedLoc.label}`
-                            });
+                                // UI Updates Logic (Sync with Desktop flow)
+                                document.getElementById('clock-status-text').textContent = "上班中";
+                                document.getElementById('clock-status-text').style.color = "#059669";
+                                document.getElementById('clock-time-display').textContent = tStr;
+                                btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
+                                btnClockAction.style.background = '#64748b';
 
-                            document.getElementById('clock-status-text').textContent = "上班中";
-                            document.getElementById('clock-status-text').style.color = "#059669";
-                            document.getElementById('clock-time-display').textContent = timeStr;
-                            btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
-                            btnClockAction.style.background = '#64748b';
+                            } else {
+                                // CLOCK OUT
+                                const tStr = appState.clockOut(appState.currentDate, appState.currentUser.id);
 
-                            alert(`打卡成功！\n地點: ${matchedLoc.label}\n時間: ${timeStr}`);
+                                alert(`下班打卡成功！\n時間: ${tStr}`);
+
+                                document.getElementById('clock-status-text').textContent = "已下班";
+                                document.getElementById('clock-status-text').style.color = "#64748b";
+                                document.getElementById('clock-time-display').textContent = `${rec.in} - ${tStr}`;
+                                btnClockAction.innerHTML = '<i class="fa-solid fa-check"></i> 完成';
+                                btnClockAction.disabled = true;
+                                btnClockAction.className = 'btn-secondary';
+                                btnClockAction.style.background = '';
+                                btnClockAction.style.border = 'none';
+                            }
 
                             mapModal.classList.remove('active');
                             renderCalendar();
