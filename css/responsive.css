@@ -2,35 +2,69 @@
 @media (max-width: 768px) {
 
     /* --- Layout Reset --- */
+    /* --- Layout Reset --- */
     body {
-        overflow-x: hidden;
-        /* Prevent horizontal scroll on body */
+        /* Force body to be scrollable */
+        height: auto !important;
+        min-height: 100% !important;
+        overflow-y: scroll !important;
+        /* Always show visual scrollbar if needed */
         background: var(--bg-color);
     }
 
-    .app-background {
-        display: none;
+    html {
+        height: auto !important;
+        overflow: auto !important;
     }
 
-    /* Hide blobs */
+    /* Reset #app to not clip content */
+    #app {
+        height: auto !important;
+        min-height: 100vh;
+        overflow: visible !important;
+        display: block !important;
+    }
 
     /* Dashboard: Stack Vertically */
     .dashboard-grid {
         display: flex !important;
-        /* Override grid */
         flex-direction: column;
-        padding: 10px !important;
         height: auto !important;
-        /* Allow growing */
+        min-height: 100vh;
         max-height: none !important;
-        /* Remove fixed height constraint */
-        overflow-y: visible !important;
-        /* Let body handle scroll */
+        overflow: visible !important;
+        padding-bottom: 120px !important;
+        /* Extra Huge Padding for safety */
     }
 
-    #app {
-        height: auto !important;
-        overflow-y: visible !important;
+    /* Allow Status Buttons Horizontal Scroll */
+    .status-buttons {
+        display: flex !important;
+        /* Switch to flex */
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        /* Horizontal Scroll */
+        gap: 8px !important;
+        padding-bottom: 10px !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .status-btn {
+        flex: 0 0 auto !important;
+        /* No shrink */
+        width: 80px !important;
+        /* Fixed manageable width */
+    }
+
+    /* Batch Mode Button Visibility */
+    .calendar-controls {
+        flex-wrap: wrap;
+    }
+
+    #batch-mode-btn {
+        font-size: 0.8rem;
+        padding: 4px 8px !important;
+        white-space: nowrap;
     }
 
     /* Sections width */
