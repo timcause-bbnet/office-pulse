@@ -592,6 +592,30 @@ document.addEventListener('DOMContentLoaded', () => {
             avatarEl.style.background = user.avatarColor;
             avatarEl.textContent = getInitials(user);
         }
+
+        // [Fix] Populate Admin Target User Select
+        const amSelect = document.getElementById('target-user-select');
+        if (amSelect) {
+            // Keep existing selection if any
+            const currentVal = amSelect.value;
+            amSelect.innerHTML = ''; // Clear to rebuild (in case users changed)
+
+            // Add Self first? Or just list all.
+            appState.users.forEach(u => {
+                const op = document.createElement('option');
+                op.value = u.id;
+                op.textContent = u.chiname || u.name;
+                amSelect.appendChild(op);
+            });
+
+            // Restore selection or default to current user
+            if (currentVal && Array.from(amSelect.options).some(o => o.value === currentVal)) {
+                amSelect.value = currentVal;
+            } else {
+                amSelect.value = appState.currentUser.id;
+            }
+        }
+
         if (DOM.sidebar.btns[0]) DOM.sidebar.btns[0].click();
         renderCalendar();
         updateSidebar();
@@ -745,42 +769,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentType = DOM.newFormState ? DOM.newFormState.type : 'office';
 
         // Meeting Input Visibility
+        // Meeting Input Visibility
         const meetContainer = document.getElementById('meeting-inputs-container');
         if (meetContainer) {
             meetContainer.style.display = (currentType === 'other') ? 'flex' : 'none';
-            // Populate Attendees if showing
+            // Populate Attendees if showing and empty
             if (currentType === 'other') {
                 const list = document.getElementById('meet-attendees-list');
                 const checkAll = document.getElementById('meet-check-all');
 
-                // Always clear and repopulate to ensure list is fresh, UNLESS we want to save state?
-                // But updateSidebar is called when clicking date. Status resets.
-                // If I clicked "Meeting" then changed Date, status might persist but list might need refresh if users changed? (Unlikely).
-                // Issue: User says they didn't see the list. Maybe "meeting-inputs-container" logic failed or currentType check failed.
-                // Or maybe the list WAS generated but hidden?
-                // Let's force generation if empty.
-                // Also double check id 'meet-attendees-list' exists.
                 if (list && list.children.length === 0) {
-                    // Sort users by department or name for better UX?
-                    // Let's just dump them.
                     const sortedUsers = [...appState.users].sort((a, b) => (a.department || '').localeCompare(b.department || ''));
 
                     sortedUsers.forEach(u => {
                         if (u.id === appState.currentUser.id) return;
                         const div = document.createElement('div');
-                        // Style specifically to be visible and clear
-                        div.style.width = "48%"; // 2 cols
+                        div.style.width = "48%";
                         div.className = 'check-group-item';
                         div.style.marginBottom = '5px';
-                        // Add explicit styling to label and input
                         div.innerHTML = `<label style="cursor:pointer; display:flex; align-items:center; gap:5px; font-size: 14px; color: #334155;"><input type="checkbox" value="${u.id}" class="meet-attendee-check" style="width:16px; height:16px;"> ${u.chiname || u.name}</label>`;
                         list.appendChild(div);
                     });
 
                     if (checkAll) {
-                        // cloneNode to remove old listeners to be safe? Or just re-add (might stack listeners if not careful)
-                        // Better: check if listener attached. Hard.
-                        // Simple: set onclick property instead of addEventListener
                         checkAll.onclick = (e) => {
                             const checks = list.querySelectorAll('.meet-attendee-check');
                             checks.forEach(c => c.checked = e.target.checked);
