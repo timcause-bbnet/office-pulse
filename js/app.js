@@ -755,40 +755,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateSidebar(typeArg) {
-        // Handle type arg from click
-        if (typeArg) {
-            DOM.newFormState.type = typeArg;
-            document.querySelectorAll('.status-btn').forEach(btn => {
-                if (btn.dataset.status === typeArg || btn.dataset.type === typeArg) btn.classList.add('active');
-                else btn.classList.remove('active');
-            });
-            DOM.newFormState.detail = '';
-            renderSubOptions(typeArg);
-        } else {
-            // If no arg, sync UI with current state
-            const current = DOM.newFormState.type;
-            document.querySelectorAll('.status-btn').forEach(btn => {
-                if (btn.dataset.status === current || btn.dataset.type === current) btn.classList.add('active');
-                else btn.classList.remove('active');
-            });
+        // 1. Resolve Effective Type
+        let effectiveType = typeArg;
+        if (!effectiveType) {
+            effectiveType = (DOM.newFormState && DOM.newFormState.type) ? DOM.newFormState.type : 'office';
         }
 
-        const currentType = DOM.newFormState ? DOM.newFormState.type : 'office';
-
-        // Meeting Input Visibility
+        // 2. Meeting Input Visibility (Priority Update)
+        // STRICTLY control display based on effectiveType. 
         const meetContainer = document.getElementById('meeting-inputs-container');
         if (meetContainer) {
-            // STRICTLY show only if type is 'other' (Meeting)
-            meetContainer.style.display = (currentType === 'other') ? 'flex' : 'none';
+            if (effectiveType === 'other') {
+                meetContainer.style.display = 'flex';
 
-            // Populate Attendees if showing 
-            if (currentType === 'other') {
+                // Populate Attendees if empty
                 const list = document.getElementById('meet-attendees-list');
                 const checkAll = document.getElementById('meet-check-all');
-
                 if (list && list.children.length === 0) {
                     const sortedUsers = [...appState.users].sort((a, b) => (a.department || '').localeCompare(b.department || ''));
-
                     sortedUsers.forEach(u => {
                         if (u.id === appState.currentUser.id) return;
                         const div = document.createElement('div');
@@ -798,7 +782,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         div.innerHTML = `<label style="cursor:pointer; display:flex; align-items:center; gap:5px; font-size: 14px; color: #334155;"><input type="checkbox" value="${u.id}" class="meet-attendee-check" style="width:16px; height:16px;"> ${u.chiname || u.name}</label>`;
                         list.appendChild(div);
                     });
-
                     if (checkAll) {
                         checkAll.onclick = (e) => {
                             const checks = list.querySelectorAll('.meet-attendee-check');
@@ -806,9 +789,35 @@ document.addEventListener('DOMContentLoaded', () => {
                         };
                     }
                 }
+            } else {
+                meetContainer.style.display = 'none';
             }
         }
 
+        // 3. Handle State Updates and Other UI
+        if (typeArg) {
+            DOM.newFormState.type = typeArg;
+            document.querySelectorAll('.status-btn').forEach(btn => {
+                const btnStatus = btn.dataset.status || btn.dataset.type;
+                if (btnStatus === typeArg) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+            DOM.newFormState.detail = '';
+            // Safe call to sub-options
+            try {
+                if (typeof renderSubOptions === 'function') renderSubOptions(typeArg);
+            } catch (e) { console.error('Error rendering sub options', e); }
+        } else {
+            // Sync UI Active Class
+            const current = DOM.newFormState.type;
+            document.querySelectorAll('.status-btn').forEach(btn => {
+                const btnStatus = btn.dataset.status || btn.dataset.type;
+                if (btnStatus === current) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
+        }
+
+        // 4. Batch Mode / Standard UI
         if (appState.isBatchMode) {
             const titleText = `已選取 ${appState.multiSelectedDates.size} 天`;
             DOM.sidebar.headerH3.innerHTML = `我的狀態：<span class="highlight-text">${titleText}</span>`;
