@@ -1093,6 +1093,19 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.keys(counts).forEach(key => { if (DOM.sidebar.counts[key]) DOM.sidebar.counts[key].textContent = counts[key]; });
     }
 
+    // [Fix] Ensure updateSidebar is exposed globally for inline onclick handlers
+    window.updateSidebar = updateSidebar;
+
+    // Safety: Attach listeners again in case DOM was ready earlier
+    setTimeout(() => {
+        document.querySelectorAll('.status-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const type = btn.dataset.status || btn.dataset.type;
+                if (type) updateSidebar(type);
+            });
+        });
+    }, 500);
+
     // --- Detailed Stats Logic ---
     function renderStats() {
         // Init Inputs
