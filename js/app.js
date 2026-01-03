@@ -764,15 +764,23 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             DOM.newFormState.detail = '';
             renderSubOptions(typeArg);
+        } else {
+            // If no arg, sync UI with current state
+            const current = DOM.newFormState.type;
+            document.querySelectorAll('.status-btn').forEach(btn => {
+                if (btn.dataset.status === current || btn.dataset.type === current) btn.classList.add('active');
+                else btn.classList.remove('active');
+            });
         }
 
         const currentType = DOM.newFormState ? DOM.newFormState.type : 'office';
 
         // Meeting Input Visibility
-        // Meeting Input Visibility
         const meetContainer = document.getElementById('meeting-inputs-container');
         if (meetContainer) {
+            // STRICTLY show only if type is 'other' (Meeting)
             meetContainer.style.display = (currentType === 'other') ? 'flex' : 'none';
+
             // Populate Attendees if showing and empty
             if (currentType === 'other') {
                 const list = document.getElementById('meet-attendees-list');
