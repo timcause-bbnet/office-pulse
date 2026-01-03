@@ -1,59 +1,137 @@
 /* Mobile Responsive Tweaks */
 @media (max-width: 768px) {
 
-    /* Layout */
-    .app-container {
-        flex-direction: column;
-        padding: 10px;
+    /* --- Layout Reset --- */
+    body {
+        overflow-x: hidden;
+        /* Prevent horizontal scroll on body */
+        background: var(--bg-color);
     }
 
-    .sidebar {
-        width: 100%;
-        margin-bottom: 20px;
-    }
-
-    /* Modal */
-    .modal-content {
-        width: 95% !important;
-        margin: 10vh auto !important;
-        padding: 20px !important;
-        max-height: 85vh;
-        overflow-y: auto;
-    }
-
-    /* Status Buttons */
-    .status-buttons {
-        grid-template-columns: repeat(3, 1fr) !important;
-    }
-
-    /* Adjust Status Buttons Text */
-    .status-btn span {
-        font-size: 0.9rem;
-    }
-
-    /* Form Grids in Settings */
-    #edit-team-form .form-group {
-        grid-template-columns: 1fr !important;
-        /* Stack inputs */
-    }
-
-    /* Location Settings Grid */
-    #edit-team-form div[style*="grid-template-columns: 120px 1fr auto"] {
-        grid-template-columns: 1fr auto !important;
-    }
-
-    #edit-team-form input[id*="label"] {
-        grid-column: span 2;
-        margin-bottom: 5px;
-    }
-
-    /* Hide decorative blobs on mobile to save performance/space */
     .app-background {
         display: none;
     }
 
-    body {
-        background: var(--bg-color);
-        /* Fallback solid */
+    /* Hide blobs */
+
+    /* Dashboard: Stack Vertically */
+    .dashboard-grid {
+        display: flex !important;
+        /* Override grid */
+        flex-direction: column;
+        padding: 10px !important;
+        height: auto !important;
+        /* Allow growing */
+        max-height: none !important;
+        /* Remove fixed height constraint */
+        overflow-y: visible !important;
+        /* Let body handle scroll */
     }
+
+    #app {
+        height: auto !important;
+        overflow-y: visible !important;
+    }
+
+    /* Sections width */
+    .calendar-section,
+    .sidebar-section {
+        width: 100% !important;
+        margin-bottom: 20px;
+        padding: 15px !important;
+        /* Reduce padding */
+    }
+
+    /* --- Top Bar --- */
+    .top-bar {
+        padding: 0.5rem 1rem !important;
+        flex-wrap: wrap;
+        /* Allow wrapping if needed */
+        gap: 10px;
+    }
+
+    .brand-small span {
+        display: none;
+        /* Hide brand text on mobile to save space */
+    }
+
+    .user-profile {
+        gap: 0.5rem !important;
+    }
+
+    #current-user-name {
+        display: none;
+        /* Hide user name, show only avatar */
+    }
+
+    /* --- Calendar --- */
+    .calendar-days {
+        min-height: 300px;
+        /* Ensure visible */
+    }
+
+    .calendar-day {
+        min-height: 80px !important;
+        /* Smaller days */
+        padding: 4px !important;
+    }
+
+    /* Font sizes */
+    .calendar-grid-header div {
+        font-size: 0.8rem;
+    }
+
+    .day-number {
+        font-size: 0.85rem;
+    }
+
+    /* --- Status Widget (Sidebar) --- */
+    /* Enhance the "App-like" feel */
+    .status-widget {
+        box-shadow: none !important;
+        background: transparent !important;
+        /* Blend in */
+        border: none !important;
+        padding: 0 !important;
+    }
+
+    .status-buttons {
+        grid-template-columns: repeat(5, 1fr) !important;
+        /* Keep 5 cols but small */
+        gap: 5px !important;
+    }
+
+    .status-btn {
+        padding: 8px 0 !important;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .status-btn span {
+        font-size: 0.8rem;
+    }
+
+    /* --- Modal Adjustments --- */
+    .modal-panel {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: none !important;
+        border-radius: 0 !important;
+        /* Full screen modal */
+    }
+
+    .modal-body {
+        padding: 1rem !important;
+    }
+
+    /* Fix specific grids inside modals */
+    #edit-team-form .form-group {
+        grid-template-columns: 1fr !important;
+    }
+
+    div[style*="grid-template-columns: 120px"] {
+        grid-template-columns: 1fr auto !important;
+    }
+
 }
