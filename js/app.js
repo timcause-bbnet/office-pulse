@@ -34,257 +34,301 @@ class AppState {
         this.clockRecords = {}; // New: Store clock records
         this.applications = []; // New: Store applications [{id, userId, type, date, data, status, timestamp}]
 
-        // --- Persistence Strategy: LocalStorage ---
-        // Note: GitHub Pages is a static hosting service. It CANNOT receive POST requests to save files.
-        // To achieve real cross-device sync, we would need a backend (like Firebase, Supabase, or Google Sheets).
-        // For now, we use LocalStorage which persists data ON THIS DEVICE only.
+        // --- Persistence Strategy: Firebase Realtime Database ---
+        // User Config from FIREBASE_SETUP
 
-        constructor() {
-            this.currentUser = null;
-            this.currentDate = new Date();
-            this.selectedDate = new Date();
-            this.isBatchMode = false;
-            this.multiSelectedDates = new Set();
-            this.isAdminMode = false;
-            this.adminTargetUserId = null;
+        // constructor() { // This constructor was duplicated in the original, removing the first one.
+        // this.currentUser = null;
+        // this.currentDate = new Date();
+        // this.selectedDate = new Date();
+        // this.isBatchMode = false;
+        // this.multiSelectedDates = new Set();
+        // this.isAdminMode = false;
+        // this.adminTargetUserId = null;
 
-            // Init with defaults
-            this.users = DEFAULT_USERS;
-            this.attendanceData = {};
-            this.companyEvents = {};
-            this.clockRecords = {};
-            this.applications = [];
+        // Init with defaults
+        // this.users = DEFAULT_USERS;
+        // this.attendanceData = {};
+        // this.companyEvents = {};
+        // this.clockRecords = {}; 
+        // this.applications = []; 
 
-            this.loadLocalData();
+        this.initFirebase();
+    }
+
+    initFirebase() {
+        // 1. Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyCOfrlTr77A7Z_UEbHs8lpUYzmi5WtI7Ps",
+            authDomain: "office-pulse-171e8.firebaseapp.com",
+            databaseURL: "https://office-pulse-171e8-default-rtdb.firebaseio.com",
+            projectId: "office-pulse-171e8",
+            storageBucket: "office-pulse-171e8.firebasestorage.app",
+            messagingSenderId: "179101803060",
+            appId: "1:179101803060:web:d145631b2c458fce386061",
+            measurementId: "G-Q1EGG9K6VS"
+        };
+
+        // 2. Initialize
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        } else if (typeof firebase === 'undefined') {
+            console.error("Firebase SDK not loaded!");
+            return;
         }
 
-        loadLocalData() {
-            const localUsers = localStorage.getItem('op_users');
-            const localAtt = localStorage.getItem('op_attendance');
-            const localEvents = localStorage.getItem('op_events');
-            const localClock = localStorage.getItem('op_clock');
-            const localApps = localStorage.getItem('op_apps');
+        // 3. Setup Listener (Realtime)
+        const dbRef = firebase.database().ref('/');
 
-            if (localUsers) this.users = JSON.parse(localUsers);
-            if (localAtt) this.attendanceData = JSON.parse(localAtt);
-            if (localEvents) this.companyEvents = JSON.parse(localEvents);
-            if (localClock) this.clockRecords = JSON.parse(localClock);
-            if (localApps) this.applications = JSON.parse(localApps);
+        dbRef.on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                console.log("🔥 Firebase Data Updated", data);
+                if (data.users) this.users = data.users;
+                if (data.attendance) this.attendanceData = data.attendance;
+                if (data.events) this.companyEvents = data.events;
+                if (data.clock) this.clockRecords = data.clock || {};
+                if (data.applications) this.applications = data.applications || [];
 
-            // Ensure Admin Perms always valid
-            this.users.forEach(u => {
-                if (u.username === 'Brian') u.permissions = { approve: true, schedule: true, manageUser: true, superAdmin: true };
-            });
-        }
+                // Ensure Admin
+                this.users.forEach(u => {
+                    if (u.username === 'Brian') u.permissions = { approve: true, schedule: true, manageUser: true, superAdmin: true };
+                });
 
-        saveLocalData() {
-            localStorage.setItem('op_users', JSON.stringify(this.users));
-            localStorage.setItem('op_attendance', JSON.stringify(this.attendanceData));
-            localStorage.setItem('op_events', JSON.stringify(this.companyEvents));
-            localStorage.setItem('op_clock', JSON.stringify(this.clockRecords));
-            localStorage.setItem('op_apps', JSON.stringify(this.applications));
-        }
+                // Refresh UI if logged in
+                if (this.currentUser) {
+                    // Update current user ref just in case perms changed
+                    const freshUser = this.users.find(u => u.id === this.currentUser.id);
+                    if (freshUser) this.currentUser = freshUser;
 
-    // Alias methods to keep code compatible
-    async loadFromServer() { this.loadLocalData(); }
-    async syncToServer() { this.saveLocalData(); }
-
-        // Clock Ops
-        getClockRecord(date, userId) {
-            const key = this.formatDate(date);
-            if (!this.clockRecords[key]) return null;
-            return this.clockRecords[key][userId];
-        }
-
-        toggleClock() {
-            if (!this.currentUser) return;
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
-            const key = this.formatDate(now);
-            const userId = this.currentUser.id; // Always clock for self
-
-            if (!this.clockRecords[key]) this.clockRecords[key] = {};
-            if (!this.clockRecords[key][userId]) {
-                // Clock In
-                this.clockRecords[key][userId] = { in: timeStr, out: null };
-                // Auto add Office status if empty? Maybe let user decide.
+                    if (typeof updateSidebar === 'function') updateSidebar();
+                    if (typeof renderCalendar === 'function') renderCalendar();
+                }
             } else {
-                // Already clocked in
-                const rec = this.clockRecords[key][userId];
-                if (!rec.out) {
-                    // Clock Out
-                    rec.out = timeStr;
-                } else {
-                    // Already out, maybe reset? or no-op
-                    alert('今日已完成上下班打卡！');
-                    return;
-                }
-            }
-            this.syncToServer();
-        }
-
-        generateMockData() {
-            return {};
-        }
-
-        saveAttendance() { this.syncToServer(); }
-        saveUsers() {
-            this.syncToServer();
-            if (this.currentUser) this.currentUser = this.users.find(u => u.id === this.currentUser.id);
-        }
-        saveEvents() { this.syncToServer(); }
-
-
-        // Auth & Basic
-        login(username, password) {
-            const user = this.users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
-            // Verify Password
-            if (user && user.password === password) {
-                this.currentUser = user;
-                this.adminTargetUserId = user.id;
-                return true;
-            }
-            return false;
-        }
-        logout() { this.currentUser = null; this.isAdminMode = false; }
-
-        // Data Ops
-        getSegments(date, userId) {
-            const dateKey = this.formatDate(date);
-            return (this.attendanceData[dateKey] && this.attendanceData[dateKey][userId]) || [];
-        }
-        addSegment(date, segment, userId = null) {
-            if (!this.currentUser) return;
-            let targetId = this.isAdminMode ? this.adminTargetUserId : this.currentUser.id;
-            if (userId) targetId = userId; // Override target if explicitly provided
-            const dateKey = typeof date === 'string' ? date : this.formatDate(date);
-            if (!this.attendanceData[dateKey]) this.attendanceData[dateKey] = {};
-            if (!this.attendanceData[dateKey][targetId]) this.attendanceData[dateKey][targetId] = [];
-            this.attendanceData[dateKey][targetId].push({ id: Date.now() + Math.random(), ...segment });
-            this.attendanceData[dateKey][targetId].sort((a, b) => (a.isAllDay === b.isAllDay) ? a.start.localeCompare(b.start) : (a.isAllDay ? -1 : 1));
-            this.saveAttendance();
-        }
-        removeSegment(date, segmentId) {
-            if (!this.currentUser) return;
-            const targetId = this.isAdminMode ? this.adminTargetUserId : this.currentUser.id;
-            const dateKey = this.formatDate(date);
-            if (!this.attendanceData[dateKey] || !this.attendanceData[dateKey][targetId]) return;
-            this.attendanceData[dateKey][targetId] = this.attendanceData[dateKey][targetId].filter(s => s.id !== segmentId);
-            this.saveAttendance();
-        }
-
-        // Event Ops
-        setEvent(date, text) {
-            const key = this.formatDate(date);
-            if (!text.trim()) delete this.companyEvents[key];
-            else this.companyEvents[key] = text;
-            this.saveEvents();
-        }
-        getEvent(date) { return this.companyEvents[this.formatDate(date)] || ''; }
-
-        // User Ops
-        addUser(userData) {
-            const newId = 'u' + (Date.now());
-            const newUser = {
-                id: newId,
-                username: userData.username,
-                password: userData.password || '1234',
-                name: userData.name || userData.username,
-                chiname: userData.chiname,
-                email: userData.email || '',
-                nickname: userData.nickname,
-                shortname: userData.shortname,
-                birthday: userData.birthday,
-                avatarColor: '#' + Math.floor(Math.random() * 16777215).toString(16),
-                avatarUrl: userData.avatarUrl || ''
-            };
-            this.users.push(newUser);
-            this.saveUsers();
-            return newUser;
-        }
-        updateUser(id, data) {
-            const u = this.users.find(x => x.id === id);
-            if (!u) return;
-            Object.assign(u, data); // Simplified update
-            this.saveUsers();
-        }
-        deleteUser(id) {
-            this.users = this.users.filter(u => u.id !== id);
-            this.saveUsers();
-        }
-
-        // Helpers
-        formatDate(date) { return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`; }
-        toggleBatchDate(date) { const key = this.formatDate(date); if (this.multiSelectedDates.has(key)) this.multiSelectedDates.delete(key); else this.multiSelectedDates.add(key); }
-        clearBatchSelection() { this.multiSelectedDates.clear(); }
-        getHoliday(date) {
-            const y = date.getFullYear(); const m = date.getMonth() + 1; const d = date.getDate();
-            const holidays = {
-                '1-1': '元旦',
-                '2-16': '小年夜', '2-17': '除夕', '2-18': '春節', '2-19': '初二', '2-20': '初三', '2-21': '初四', '2-22': '初五',
-                '2-28': '和平紀念日', '4-4': '兒童節', '4-5': '清明節', '5-1': '勞動節', '6-19': '端午節', '9-25': '中秋節', '10-10': '國慶日', '12-25': '行憲紀念日(假)'
-            };
-            const holidays25 = { '1-1': '元旦', '2-28': '和平紀念日', '4-4': '兒童節', '4-5': '清明節', '5-1': '勞動節', '5-31': '端午節', '10-6': '中秋節', '10-10': '國慶日', '12-25': '行憲紀念日(假)' };
-            const key = `${m}-${d}`;
-            if (y === 2026) return holidays[key]; if (y === 2025) return holidays25[key];
-            return null;
-        }
-
-        // Application Ops
-        addApplication(type, data) {
-            const id = 'app_' + Date.now();
-            const record = {
-                id,
-                userId: this.currentUser.id,
-                type, // 'correction' or 'expense'
-                date: new Date().toISOString().split('T')[0], // submission date
-                data, // { date, in, out, reason, amount, desc, note }
-                status: 'pending', // pending, approved, rejected
-                timestamp: Date.now()
-            };
-            this.applications.push(record);
-            this.syncToServer();
-            return record;
-        }
-
-        updateApplicationStatus(appId, status) {
-            const app = this.applications.find(a => a.id === appId);
-            if (app) {
-                app.status = status;
-                if (status === 'approved') {
-                    if (app.type === 'correction') {
-                        const key = app.data.date;
-                        if (!this.clockRecords[key]) this.clockRecords[key] = {};
-                        if (!this.clockRecords[key][app.userId]) this.clockRecords[key][app.userId] = {};
-
-                        if (app.data.in) this.clockRecords[key][app.userId].in = app.data.in;
-                        if (app.data.out) this.clockRecords[key][app.userId].out = app.data.out;
-                    } else if (app.type === 'segment') {
-                        const dateKey = app.data.date;
-                        const userId = app.userId;
-                        if (!this.attendanceData[dateKey]) this.attendanceData[dateKey] = {};
-                        if (!this.attendanceData[dateKey][userId]) this.attendanceData[dateKey][userId] = [];
-
-                        const newSeg = {
-                            id: Date.now() + Math.random(),
-                            type: app.data.type,
-                            detail: app.data.detail,
-                            note: app.data.note,
-                            isAllDay: app.data.isAllDay,
-                            start: app.data.start,
-                            end: app.data.end
-                        };
-                        this.attendanceData[dateKey][userId].push(newSeg);
-                        this.attendanceData[dateKey][userId].sort((a, b) => (a.isAllDay === b.isAllDay) ? a.start.localeCompare(b.start) : (a.isAllDay ? -1 : 1));
-                        this.saveAttendance();
-                    }
-                }
+                // First time load (Empty DB)?
+                console.log("⚠️ Firebase is empty. uploading defaults...");
                 this.syncToServer();
             }
+        });
+    }
+
+    // Replace Save Method
+    async syncToServer() {
+        const payload = {
+            users: this.users,
+            attendance: this.attendanceData,
+            events: this.companyEvents,
+            clock: this.clockRecords,
+            applications: this.applications
+        };
+        try {
+            await firebase.database().ref('/').set(payload);
+            console.log("✅ Saved to Firebase");
+        } catch (e) {
+            console.error("Sync failed", e);
+            alert("連線儲存失敗，請檢查網路或是 Firebase 權限設定");
         }
     }
 
-    const appState = new AppState();
+    // Legacy method stubs
+    async loadFromServer() { /* Auto-handled by on('value') listener */ }
+
+    // Clock Ops
+    getClockRecord(date, userId) {
+        const key = this.formatDate(date);
+        if (!this.clockRecords[key]) return null;
+        return this.clockRecords[key][userId];
+    }
+
+    toggleClock() {
+        if (!this.currentUser) return;
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('zh-TW', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        const key = this.formatDate(now);
+        const userId = this.currentUser.id; // Always clock for self
+
+        if (!this.clockRecords[key]) this.clockRecords[key] = {};
+        if (!this.clockRecords[key][userId]) {
+            // Clock In
+            this.clockRecords[key][userId] = { in: timeStr, out: null };
+            // Auto add Office status if empty? Maybe let user decide.
+        } else {
+            // Already clocked in
+            const rec = this.clockRecords[key][userId];
+            if (!rec.out) {
+                // Clock Out
+                rec.out = timeStr;
+            } else {
+                // Already out, maybe reset? or no-op
+                alert('今日已完成上下班打卡！');
+                return;
+            }
+        }
+        this.syncToServer();
+    }
+
+    generateMockData() {
+        return {};
+    }
+
+    saveAttendance() { this.syncToServer(); }
+    saveUsers() {
+        this.syncToServer();
+        if (this.currentUser) this.currentUser = this.users.find(u => u.id === this.currentUser.id);
+    }
+    saveEvents() { this.syncToServer(); }
+
+
+    // Auth & Basic
+    login(username, password) {
+        const user = this.users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
+        // Verify Password
+        if (user && user.password === password) {
+            this.currentUser = user;
+            this.adminTargetUserId = user.id;
+            return true;
+        }
+        return false;
+    }
+    logout() { this.currentUser = null; this.isAdminMode = false; }
+
+    // Data Ops
+    getSegments(date, userId) {
+        const dateKey = this.formatDate(date);
+        return (this.attendanceData[dateKey] && this.attendanceData[dateKey][userId]) || [];
+    }
+    addSegment(date, segment, userId = null) {
+        if (!this.currentUser) return;
+        let targetId = this.isAdminMode ? this.adminTargetUserId : this.currentUser.id;
+        if (userId) targetId = userId; // Override target if explicitly provided
+        const dateKey = typeof date === 'string' ? date : this.formatDate(date);
+        if (!this.attendanceData[dateKey]) this.attendanceData[dateKey] = {};
+        if (!this.attendanceData[dateKey][targetId]) this.attendanceData[dateKey][targetId] = [];
+        this.attendanceData[dateKey][targetId].push({ id: Date.now() + Math.random(), ...segment });
+        this.attendanceData[dateKey][targetId].sort((a, b) => (a.isAllDay === b.isAllDay) ? a.start.localeCompare(b.start) : (a.isAllDay ? -1 : 1));
+        this.saveAttendance();
+    }
+    removeSegment(date, segmentId) {
+        if (!this.currentUser) return;
+        const targetId = this.isAdminMode ? this.adminTargetUserId : this.currentUser.id;
+        const dateKey = this.formatDate(date);
+        if (!this.attendanceData[dateKey] || !this.attendanceData[dateKey][targetId]) return;
+        this.attendanceData[dateKey][targetId] = this.attendanceData[dateKey][targetId].filter(s => s.id !== segmentId);
+        this.saveAttendance();
+    }
+
+    // Event Ops
+    setEvent(date, text) {
+        const key = this.formatDate(date);
+        if (!text.trim()) delete this.companyEvents[key];
+        else this.companyEvents[key] = text;
+        this.saveEvents();
+    }
+    getEvent(date) { return this.companyEvents[this.formatDate(date)] || ''; }
+
+    // User Ops
+    addUser(userData) {
+        const newId = 'u' + (Date.now());
+        const newUser = {
+            id: newId,
+            username: userData.username,
+            password: userData.password || '1234',
+            name: userData.name || userData.username,
+            chiname: userData.chiname,
+            email: userData.email || '',
+            nickname: userData.nickname,
+            shortname: userData.shortname,
+            birthday: userData.birthday,
+            avatarColor: '#' + Math.floor(Math.random() * 16777215).toString(16),
+            avatarUrl: userData.avatarUrl || ''
+        };
+        this.users.push(newUser);
+        this.saveUsers();
+        return newUser;
+    }
+    updateUser(id, data) {
+        const u = this.users.find(x => x.id === id);
+        if (!u) return;
+        Object.assign(u, data); // Simplified update
+        this.saveUsers();
+    }
+    deleteUser(id) {
+        this.users = this.users.filter(u => u.id !== id);
+        this.saveUsers();
+    }
+
+    // Helpers
+    formatDate(date) { return `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`; }
+    toggleBatchDate(date) { const key = this.formatDate(date); if (this.multiSelectedDates.has(key)) this.multiSelectedDates.delete(key); else this.multiSelectedDates.add(key); }
+    clearBatchSelection() { this.multiSelectedDates.clear(); }
+    getHoliday(date) {
+        const y = date.getFullYear(); const m = date.getMonth() + 1; const d = date.getDate();
+        const holidays = {
+            '1-1': '元旦',
+            '2-16': '小年夜', '2-17': '除夕', '2-18': '春節', '2-19': '初二', '2-20': '初三', '2-21': '初四', '2-22': '初五',
+            '2-28': '和平紀念日', '4-4': '兒童節', '4-5': '清明節', '5-1': '勞動節', '6-19': '端午節', '9-25': '中秋節', '10-10': '國慶日', '12-25': '行憲紀念日(假)'
+        };
+        const holidays25 = { '1-1': '元旦', '2-28': '和平紀念日', '4-4': '兒童節', '4-5': '清明節', '5-1': '勞動節', '5-31': '端午節', '10-6': '中秋節', '10-10': '國慶日', '12-25': '行憲紀念日(假)' };
+        const key = `${m}-${d}`;
+        if (y === 2026) return holidays[key]; if (y === 2025) return holidays25[key];
+        return null;
+    }
+
+    // Application Ops
+    addApplication(type, data) {
+        const id = 'app_' + Date.now();
+        const record = {
+            id,
+            userId: this.currentUser.id,
+            type, // 'correction' or 'expense'
+            date: new Date().toISOString().split('T')[0], // submission date
+            data, // { date, in, out, reason, amount, desc, note }
+            status: 'pending', // pending, approved, rejected
+            timestamp: Date.now()
+        };
+        this.applications.push(record);
+        this.syncToServer();
+        return record;
+    }
+
+    updateApplicationStatus(appId, status) {
+        const app = this.applications.find(a => a.id === appId);
+        if (app) {
+            app.status = status;
+            if (status === 'approved') {
+                if (app.type === 'correction') {
+                    const key = app.data.date;
+                    if (!this.clockRecords[key]) this.clockRecords[key] = {};
+                    if (!this.clockRecords[key][app.userId]) this.clockRecords[key][app.userId] = {};
+
+                    if (app.data.in) this.clockRecords[key][app.userId].in = app.data.in;
+                    if (app.data.out) this.clockRecords[key][app.userId].out = app.data.out;
+                } else if (app.type === 'segment') {
+                    const dateKey = app.data.date;
+                    const userId = app.userId;
+                    if (!this.attendanceData[dateKey]) this.attendanceData[dateKey] = {};
+                    if (!this.attendanceData[dateKey][userId]) this.attendanceData[dateKey][userId] = [];
+
+                    const newSeg = {
+                        id: Date.now() + Math.random(),
+                        type: app.data.type,
+                        detail: app.data.detail,
+                        note: app.data.note,
+                        isAllDay: app.data.isAllDay,
+                        start: app.data.start,
+                        end: app.data.end
+                    };
+                    this.attendanceData[dateKey][userId].push(newSeg);
+                    this.attendanceData[dateKey][userId].sort((a, b) => (a.isAllDay === b.isAllDay) ? a.start.localeCompare(b.start) : (a.isAllDay ? -1 : 1));
+                    this.saveAttendance();
+                }
+            }
+            this.syncToServer();
+        }
+    }
+}
+
+const appState = new AppState();
 
 document.addEventListener('DOMContentLoaded', () => {
     // UI Elements
