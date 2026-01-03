@@ -2089,8 +2089,9 @@ document.addEventListener('DOMContentLoaded', () => {
             // Logic: If screen width > 768px (Non-mobile), skip map.
             const isDesktop = window.innerWidth > 768;
 
-            // Determine intention (In or Out?)
-            const todayStr = appState.formatDate(appState.currentDate);
+            // Determine intention (In or Out?) - Always use NOW
+            const nowTime = new Date();
+            const todayStr = appState.formatDate(nowTime);
             let rec = appState.clockRecords[todayStr]?.[appState.currentUser.id];
 
             // If checking intentionally, determine logic state
@@ -2106,8 +2107,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Direct Clock In for Desktop
                 if (!isClockingOut) {
                     // Clock IN
-                    const timeStr = appState.clockIn(appState.currentDate, appState.currentUser.id);
-                    appState.addSegment(appState.currentDate, {
+                    const timeStr = appState.clockIn(nowTime, appState.currentUser.id);
+                    appState.addSegment(nowTime, {
                         type: 'office',
                         start: timeStr,
                         end: '18:00',
@@ -2123,7 +2124,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     alert(`電腦版打卡成功！時間: ${timeStr}`);
                 } else {
                     // Clock OUT
-                    const timeStr = appState.clockOut(appState.currentDate, appState.currentUser.id);
+                    const timeStr = appState.clockOut(nowTime, appState.currentUser.id);
                     document.getElementById('clock-status-text').textContent = "已下班";
                     document.getElementById('clock-status-text').style.color = "#64748b";
                     document.getElementById('clock-time-display').textContent = `${rec.in} - ${timeStr}`; // Update to range
@@ -2215,8 +2216,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             // Re-evaluate state just in case, but local scope is safe enough
                             if (!isClockingOut) {
                                 // CLOCK IN
-                                const tStr = appState.clockIn(appState.currentDate, appState.currentUser.id);
-                                appState.addSegment(appState.currentDate, {
+                                const tStr = appState.clockIn(nowTime, appState.currentUser.id);
+                                appState.addSegment(nowTime, {
                                     type: 'office',
                                     start: tStr,
                                     end: '18:00',
@@ -2235,7 +2236,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                             } else {
                                 // CLOCK OUT
-                                const tStr = appState.clockOut(appState.currentDate, appState.currentUser.id);
+                                const tStr = appState.clockOut(nowTime, appState.currentUser.id);
 
                                 alert(`下班打卡成功！\n時間: ${tStr}`);
 
