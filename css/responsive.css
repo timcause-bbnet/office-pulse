@@ -99,6 +99,9 @@
         grid-template-columns: repeat(5, 1fr) !important;
         /* Keep 5 cols but small */
         gap: 5px !important;
+        /* If buttons are too wide, allow horizontal scroll */
+        display: grid;
+        min-width: 100%;
     }
 
     .status-btn {
@@ -110,6 +113,13 @@
 
     .status-btn span {
         font-size: 0.8rem;
+    }
+
+    /* Important: Allow the Team Status List below to scroll separately or with the page */
+    .team-list-panel {
+        margin-top: 1rem !important;
+        padding-bottom: 3rem;
+        /* Extra space at bottom */
     }
 
     /* --- Modal Adjustments --- */

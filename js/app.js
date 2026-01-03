@@ -103,11 +103,16 @@ class AppState {
 
                     if (typeof updateSidebar === 'function') updateSidebar();
                     if (typeof renderCalendar === 'function') renderCalendar();
+                } else {
+                    // Try auto-login if users loaded for the first time
+                    this.checkPersistentLogin();
                 }
             } else {
                 // First time load (Empty DB)?
                 console.log("⚠️ Firebase is empty. uploading defaults...");
                 this.syncToServer();
+                // Also check persistent login here just in case local defaults connect
+                this.checkPersistentLogin();
             }
         });
     }
@@ -180,17 +185,62 @@ class AppState {
 
 
     // Auth & Basic
+    // Auth & Basic
     login(username, password) {
         const user = this.users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
         // Verify Password
         if (user && user.password === password) {
-            this.currentUser = user;
-            this.adminTargetUserId = user.id;
+            this.loginSuccess(user);
             return true;
         }
         return false;
     }
-    logout() { this.currentUser = null; this.isAdminMode = false; }
+
+    loginSuccess(user) {
+        this.currentUser = user;
+        this.adminTargetUserId = user.id;
+
+        // Persistent Login: Save ID
+        localStorage.setItem('op_current_user_id', user.id);
+
+        // Ensure Admin Perms
+        if (user.username === 'Brian') {
+            user.permissions = { approve: true, schedule: true, manageUser: true, superAdmin: true };
+        }
+    }
+
+    logout() {
+        this.currentUser = null;
+        this.isAdminMode = false;
+        localStorage.removeItem('op_current_user_id');
+        location.reload(); // Force reload to clear state
+    }
+
+    // Check local storage for persistent login
+    checkPersistentLogin() {
+        const savedId = localStorage.getItem('op_current_user_id');
+        if (savedId && this.users.length > 0) {
+            const user = this.users.find(u => u.id === savedId);
+            if (user) {
+                console.log("🔄 Auto-login restored for:", user.username);
+                this.loginSuccess(user);
+
+                // Switch Screens
+                const loginScreen = document.getElementById('login-screen');
+                const dashboardScreen = document.getElementById('dashboard-screen');
+
+                if (loginScreen) loginScreen.classList.remove('active');
+                if (dashboardScreen) dashboardScreen.classList.add('active');
+
+                // Initialize UI
+                if (typeof updateUI === 'function') updateUI();
+                else {
+                    if (typeof updateSidebar === 'function') updateSidebar();
+                    if (typeof renderCalendar === 'function') renderCalendar();
+                }
+            }
+        }
+    }
 
     // Data Ops
     getSegments(date, userId) {
