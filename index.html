@@ -23,45 +23,51 @@
         /* Mobile Specific Overrides in HTML to ensure highest priority */
         @media (max-width: 768px) {
 
-            /* --- Mobile Scroll Fix --- */
+            /* --- Mobile Scroll Fix (Aggressive) --- */
             html,
             body {
                 height: 100%;
-                overflow-x: hidden;
-                overflow-y: hidden;
-                /* Prevent double scrollbars, let #app handle it */
+                overflow: hidden;
+                /* App container handles scroll */
             }
 
             #app {
                 height: 100%;
                 overflow-y: auto;
-                /* Main scroller */
                 -webkit-overflow-scrolling: touch;
-                /* Smooth scroll */
             }
 
-            /* Unset fixed heights to allow natural flow scrolling */
             .dashboard-grid {
-                display: flex !important;
-                flex-direction: column;
+                display: block !important;
+                /* Stack normally */
                 height: auto !important;
                 max-height: none !important;
                 overflow: visible !important;
-                padding-bottom: 50px;
-                /* Space for bottom content */
+                padding-bottom: 80px;
+                /* Big padding for bottom scroll */
+            }
+
+            /* Disable internal scrolling for Calendar on mobile -> Let it expand */
+            .calendar-days {
+                overflow: visible !important;
+                height: auto !important;
+                flex: none !important;
+                display: grid !important;
+                /* Keep grid layout */
+            }
+
+            .calendar-section {
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                margin-bottom: 20px;
             }
 
             .sidebar-section {
                 height: auto !important;
                 max-height: none !important;
                 overflow: visible !important;
-            }
-
-            /* Force full width on layout items */
-            .calendar-section,
-            .sidebar-section {
-                width: 100% !important;
-                flex-shrink: 0;
+                margin-top: 20px;
             }
 
             #login-screen {
@@ -72,12 +78,10 @@
                 bottom: 0;
                 z-index: 9999;
                 display: flex !important;
-                /* Force flex for centering */
                 flex-direction: column;
                 justify-content: center;
                 align-items: center;
                 background: #f8fafc;
-                /* Solid background to cover messy content */
             }
 
             #login-screen:not(.active) {
