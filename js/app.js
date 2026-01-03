@@ -2029,8 +2029,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Clock In Logic with Geolocation (Visual Map) ---
-    const btnClockAction = document.getElementById('btn-clock-action');
-    if (btnClockAction) {
+    const rawBtnClock = document.getElementById('btn-clock-action');
+    if (rawBtnClock) {
+        // [Security Fix] Remove any duplicate/legacy listeners by recreating the element
+        const btnClockAction = rawBtnClock.cloneNode(true);
+        rawBtnClock.parentNode.replaceChild(btnClockAction, rawBtnClock);
+
         btnClockAction.addEventListener('click', () => {
             // 1. Check Geolocation Support
             if (!navigator.geolocation) { alert('您的裝置不支援地理位置功能，無法使用打卡功能。'); return; }
@@ -2146,6 +2150,7 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         });
     }
+
 
     if (DOM.calendar.batchBtn) DOM.calendar.batchBtn.addEventListener('click', () => {
         appState.isBatchMode = !appState.isBatchMode;
