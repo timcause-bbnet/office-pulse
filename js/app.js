@@ -822,89 +822,90 @@ document.addEventListener('DOMContentLoaded', () => {
                 const statusText = document.getElementById('clock-status-text');
                 const timeDisplay = document.getElementById('clock-time-display');
 
-                statusText.textContent = "尚未打卡";
-                timeDisplay.textContent = "--:--";
-                btn.innerHTML = '<i class="fa-solid fa-stopwatch"></i> 上班';
-                btn.className = 'btn-primary';
-                btn.disabled = false;
-                // btn.onclick removed to prevent bypass
-            } else if (!rec.out) {
-                statusText.textContent = "工作中";
-                timeDisplay.textContent = `上班: ${rec.in}`;
-                btn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
-                btn.className = 'btn-text-danger';
-                btn.style.border = '1px solid #ef4444';
-                btn.disabled = false;
-                // btn.onclick removed to prevent bypass
+                if (!rec) {
+                    statusText.textContent = "尚未打卡";
+                    timeDisplay.textContent = "--:--";
+                    btn.innerHTML = '<i class="fa-solid fa-stopwatch"></i> 上班';
+                    btn.className = 'btn-primary';
+                    btn.disabled = false;
+                    // btn.onclick removed to prevent bypass
+                } else if (!rec.out) {
+                    statusText.textContent = "工作中";
+                    timeDisplay.textContent = `上班: ${rec.in}`;
+                    btn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
+                    btn.className = 'btn-text-danger';
+                    btn.style.border = '1px solid #ef4444';
+                    btn.disabled = false;
+                    // btn.onclick removed to prevent bypass
+                } else {
+                    statusText.textContent = "今日已結束";
+                    timeDisplay.textContent = `${rec.in} - ${rec.out}`;
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> 完成';
+                    btn.disabled = true;
+                    btn.className = 'btn-secondary';
+                    btn.style.border = 'none';
+                }
             } else {
-                statusText.textContent = "今日已結束";
-                timeDisplay.textContent = `${rec.in} - ${rec.out}`;
-                btn.innerHTML = '<i class="fa-solid fa-check"></i> 完成';
-                btn.disabled = true;
-                btn.className = 'btn-secondary';
-                btn.style.border = 'none';
+                clockSection.style.display = 'none';
             }
-        } else {
-            clockSection.style.display = 'none';
-        }
 
-        const targetId = appState.isAdminMode ? appState.adminTargetUserId : appState.currentUser.id;
-        const targetUser = appState.users.find(u => u.id === targetId);
+            const targetId = appState.isAdminMode ? appState.adminTargetUserId : appState.currentUser.id;
+            const targetUser = appState.users.find(u => u.id === targetId);
 
-        let htmlHTML = "";
-        if (appState.isAdminMode && targetId !== appState.currentUser.id) {
-            const name = targetUser.chiname || targetUser.nickname || targetUser.name;
-            htmlHTML = `編輯 ${name}：<span class="highlight-text">${dateStr}</span>`;
-        } else {
-            htmlHTML = `我的狀態：<span class="highlight-text">${dateStr}</span>`;
-        }
-        DOM.sidebar.headerH3.innerHTML = htmlHTML;
+            let htmlHTML = "";
+            if (appState.isAdminMode && targetId !== appState.currentUser.id) {
+                const name = targetUser.chiname || targetUser.nickname || targetUser.name;
+                htmlHTML = `編輯 ${name}：<span class="highlight-text">${dateStr}</span>`;
+            } else {
+                htmlHTML = `我的狀態：<span class="highlight-text">${dateStr}</span>`;
+            }
+            DOM.sidebar.headerH3.innerHTML = htmlHTML;
 
-        DOM.sidebar.segmentList.innerHTML = '';
-        const mySegments = appState.getSegments(appState.selectedDate, targetId);
+            DOM.sidebar.segmentList.innerHTML = '';
+            const mySegments = appState.getSegments(appState.selectedDate, targetId);
 
-        // Group segments by type for "One Line, One X" display
-        const groupedSegs = {};
-        mySegments.forEach(seg => {
-            if (!groupedSegs[seg.type]) groupedSegs[seg.type] = [];
-            groupedSegs[seg.type].push(seg);
-        });
+            // Group segments by type for "One Line, One X" display
+            const groupedSegs = {};
+            mySegments.forEach(seg => {
+                if (!groupedSegs[seg.type]) groupedSegs[seg.type] = [];
+                groupedSegs[seg.type].push(seg);
+            });
 
-        Object.keys(groupedSegs).forEach(type => {
-            const group = groupedSegs[type];
-            const li = document.createElement('li');
-            li.className = `my-segment-item ${type}`;
+            Object.keys(groupedSegs).forEach(type => {
+                const group = groupedSegs[type];
+                const li = document.createElement('li');
+                li.className = `my-segment-item ${type}`;
 
-            // Combine details: "Detail1, Detail2"
-            // Hide "全天" if redundant? User said for *Team List*, maybe here too?
-            // "我不用打x兩次" is the main goal.
-            const details = group.map(seg => {
-                let d = translateType(seg.type);
-                if (seg.detail) d += ` (${seg.detail})`;
-                if (seg.note) d += ` : ${seg.note}`;
-                return d;
-            }).join(' / ');
+                // Combine details: "Detail1, Detail2"
+                // Hide "全天" if redundant? User said for *Team List*, maybe here too?
+                // "我不用打x兩次" is the main goal.
+                const details = group.map(seg => {
+                    let d = translateType(seg.type);
+                    if (seg.detail) d += ` (${seg.detail})`;
+                    if (seg.note) d += ` : ${seg.note}`;
+                    return d;
+                }).join(' / ');
 
-            // Time? If mixed, show "多個時段"? Or just first?
-            // Provide simple summary
-            const timeStr = group.every(s => s.isAllDay) ? '全天' : '多時段';
+                // Time? If mixed, show "多個時段"? Or just first?
+                // Provide simple summary
+                const timeStr = group.every(s => s.isAllDay) ? '全天' : '多時段';
 
-            li.innerHTML = `
+                li.innerHTML = `
                     <div class="info"><span class="type">${details}</span><span class="time"><i class="fa-regular fa-clock"></i> ${timeStr}</span></div>
                     <div class="btn-del" title="刪除全部"><i class="fa-solid fa-xmark"></i></div>
                 `;
-            li.querySelector('.btn-del').addEventListener('click', () => {
-                // Delete ALL in group
-                if (confirm('確定刪除此類別的所有行程嗎?')) {
-                    group.forEach(s => appState.removeSegment(appState.selectedDate, s.id));
-                    updateSidebar(); renderCalendar();
-                }
+                li.querySelector('.btn-del').addEventListener('click', () => {
+                    // Delete ALL in group
+                    if (confirm('確定刪除此類別的所有行程嗎?')) {
+                        group.forEach(s => appState.removeSegment(appState.selectedDate, s.id));
+                        updateSidebar(); renderCalendar();
+                    }
+                });
+                DOM.sidebar.segmentList.appendChild(li);
             });
-            DOM.sidebar.segmentList.appendChild(li);
-        });
-        updateTeamList();
+            updateTeamList();
+        }
     }
-}
 
     function updateTeamList() {
         Object.keys(DOM.sidebar.lists).forEach(key => { DOM.sidebar.lists[key].innerHTML = ''; DOM.sidebar.counts[key].textContent = '0'; });
@@ -1377,161 +1378,161 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Tab Logic
     const tabSummary = document.getElementById('tab-btn-summary');
-const tabDetail = document.getElementById('tab-btn-detail');
-const viewSummary = document.getElementById('stats-summary-view');
-const viewDetail = document.getElementById('stats-detail-view');
+    const tabDetail = document.getElementById('tab-btn-detail');
+    const viewSummary = document.getElementById('stats-summary-view');
+    const viewDetail = document.getElementById('stats-detail-view');
 
-if (tabSummary && tabDetail) {
-    tabSummary.addEventListener('click', () => {
-        tabSummary.classList.add('active'); tabDetail.classList.remove('active');
-        viewSummary.classList.remove('hidden'); viewDetail.classList.add('hidden');
-    });
-    tabDetail.addEventListener('click', () => {
-        tabDetail.classList.add('active'); tabSummary.classList.remove('active');
-        viewDetail.classList.remove('hidden'); viewSummary.classList.add('hidden');
-        const sel = document.getElementById('detail-user-select');
-        if (sel) renderDetailedStats(sel.value);
-    });
-}
-
-// --- Sub Options & Interaction ---
-function renderSubOptions() {
-    DOM.sidebar.subOptionsContainer.innerHTML = '';
-    const status = DOM.newFormState.type;
-    if (SUB_OPTIONS[status]) {
-        DOM.sidebar.subOptionsContainer.classList.remove('hidden');
-        SUB_OPTIONS[status].forEach(opt => {
-            const chip = document.createElement('div');
-            chip.className = 'detail-chip';
-            chip.textContent = opt;
-            if (DOM.newFormState.detail === opt) chip.classList.add('active');
-            chip.addEventListener('click', () => { DOM.newFormState.detail = opt; renderSubOptions(); });
-            DOM.sidebar.subOptionsContainer.appendChild(chip);
+    if (tabSummary && tabDetail) {
+        tabSummary.addEventListener('click', () => {
+            tabSummary.classList.add('active'); tabDetail.classList.remove('active');
+            viewSummary.classList.remove('hidden'); viewDetail.classList.add('hidden');
         });
-    } else { DOM.sidebar.subOptionsContainer.classList.add('hidden'); }
-}
-
-// --- Team Manager Logic (Same as V5) ---
-// (Consolidated into AppState methods above, UI handlers below)
-let editingUserId = null;
-let tempAvatarUrl = '';
-
-function showTeamList() {
-    if (DOM.settings.teamListView) DOM.settings.teamListView.classList.remove('hidden');
-    if (DOM.settings.teamEditorView) DOM.settings.teamEditorView.classList.add('hidden');
-    renderTeamSettings();
-}
-
-function showTeamEditor(userId = null) {
-    if (DOM.settings.teamListView) DOM.settings.teamListView.classList.add('hidden');
-    if (DOM.settings.teamEditorView) DOM.settings.teamEditorView.classList.remove('hidden');
-    editingUserId = userId;
-    tempAvatarUrl = '';
-
-    // Populate Manager Select
-    if (DOM.settings.editManagerSelect) {
-        DOM.settings.editManagerSelect.innerHTML = '<option value="">(無)</option>';
-        appState.users.forEach(mu => {
-            if (userId && mu.id === userId) return;
-            const op = document.createElement('option');
-            op.value = mu.id;
-            op.textContent = mu.chiname ? `${mu.chiname} (${mu.username})` : mu.username;
-            DOM.settings.editManagerSelect.appendChild(op);
+        tabDetail.addEventListener('click', () => {
+            tabDetail.classList.add('active'); tabSummary.classList.remove('active');
+            viewDetail.classList.remove('hidden'); viewSummary.classList.add('hidden');
+            const sel = document.getElementById('detail-user-select');
+            if (sel) renderDetailedStats(sel.value);
         });
     }
 
-    if (userId) { // Edit
-        const u = appState.users.find(x => x.id === userId);
-        DOM.settings.editorTitle.textContent = "編輯成員資料";
-        DOM.settings.editUsername.value = u.username;
-        DOM.settings.editPassword.value = '';
-        DOM.settings.editChiname.value = u.chiname || '';
-        if (DOM.settings.editEmail) DOM.settings.editEmail.value = u.email || '';
-        DOM.settings.editBirthday.value = u.birthday || '';
-        DOM.settings.editNickname.value = u.nickname || '';
-        DOM.settings.editShortname.value = u.shortname || '';
-        DOM.settings.editDepartment.value = u.title || '';
+    // --- Sub Options & Interaction ---
+    function renderSubOptions() {
+        DOM.sidebar.subOptionsContainer.innerHTML = '';
+        const status = DOM.newFormState.type;
+        if (SUB_OPTIONS[status]) {
+            DOM.sidebar.subOptionsContainer.classList.remove('hidden');
+            SUB_OPTIONS[status].forEach(opt => {
+                const chip = document.createElement('div');
+                chip.className = 'detail-chip';
+                chip.textContent = opt;
+                if (DOM.newFormState.detail === opt) chip.classList.add('active');
+                chip.addEventListener('click', () => { DOM.newFormState.detail = opt; renderSubOptions(); });
+                DOM.sidebar.subOptionsContainer.appendChild(chip);
+            });
+        } else { DOM.sidebar.subOptionsContainer.classList.add('hidden'); }
+    }
 
-        if (DOM.settings.editManagerSelect) DOM.settings.editManagerSelect.value = u.managerId || '';
+    // --- Team Manager Logic (Same as V5) ---
+    // (Consolidated into AppState methods above, UI handlers below)
+    let editingUserId = null;
+    let tempAvatarUrl = '';
 
-        // Populate Locations
-        const locs = u.locations || [{}, {}, {}];
-        if (DOM.settings.editLoc1Label) {
-            DOM.settings.editLoc1Label.value = locs[0]?.label || '';
-            document.getElementById('edit-loc1-addr').value = locs[0]?.addr || '';
-            DOM.settings.editLoc1Lat.value = locs[0]?.lat || '';
-            DOM.settings.editLoc1Lng.value = locs[0]?.lng || '';
+    function showTeamList() {
+        if (DOM.settings.teamListView) DOM.settings.teamListView.classList.remove('hidden');
+        if (DOM.settings.teamEditorView) DOM.settings.teamEditorView.classList.add('hidden');
+        renderTeamSettings();
+    }
+
+    function showTeamEditor(userId = null) {
+        if (DOM.settings.teamListView) DOM.settings.teamListView.classList.add('hidden');
+        if (DOM.settings.teamEditorView) DOM.settings.teamEditorView.classList.remove('hidden');
+        editingUserId = userId;
+        tempAvatarUrl = '';
+
+        // Populate Manager Select
+        if (DOM.settings.editManagerSelect) {
+            DOM.settings.editManagerSelect.innerHTML = '<option value="">(無)</option>';
+            appState.users.forEach(mu => {
+                if (userId && mu.id === userId) return;
+                const op = document.createElement('option');
+                op.value = mu.id;
+                op.textContent = mu.chiname ? `${mu.chiname} (${mu.username})` : mu.username;
+                DOM.settings.editManagerSelect.appendChild(op);
+            });
         }
-        if (DOM.settings.editLoc2Label) {
-            DOM.settings.editLoc2Label.value = locs[1]?.label || '';
-            document.getElementById('edit-loc2-addr').value = locs[1]?.addr || '';
-            DOM.settings.editLoc2Lat.value = locs[1]?.lat || '';
-            DOM.settings.editLoc2Lng.value = locs[1]?.lng || '';
-        }
-        if (DOM.settings.editLoc3Label) {
-            DOM.settings.editLoc3Label.value = locs[2]?.label || '';
-            document.getElementById('edit-loc3-addr').value = locs[2]?.addr || '';
-            DOM.settings.editLoc3Lat.value = locs[2]?.lat || '';
-            DOM.settings.editLoc3Lng.value = locs[2]?.lng || '';
-        }
 
-        // Permissions
-        const perms = u.permissions || {};
-        if (DOM.settings.permApprove) DOM.settings.permApprove.checked = perms.approve || false;
-        if (DOM.settings.permSchedule) DOM.settings.permSchedule.checked = perms.schedule || false;
-        if (DOM.settings.permManage) DOM.settings.permManage.checked = perms.manageUser || false;
-        if (DOM.settings.permSuper) DOM.settings.permSuper.checked = perms.superAdmin || false;
+        if (userId) { // Edit
+            const u = appState.users.find(x => x.id === userId);
+            DOM.settings.editorTitle.textContent = "編輯成員資料";
+            DOM.settings.editUsername.value = u.username;
+            DOM.settings.editPassword.value = '';
+            DOM.settings.editChiname.value = u.chiname || '';
+            if (DOM.settings.editEmail) DOM.settings.editEmail.value = u.email || '';
+            DOM.settings.editBirthday.value = u.birthday || '';
+            DOM.settings.editNickname.value = u.nickname || '';
+            DOM.settings.editShortname.value = u.shortname || '';
+            DOM.settings.editDepartment.value = u.title || '';
 
-        tempAvatarUrl = u.avatarUrl || '';
-        if (tempAvatarUrl) { DOM.settings.editorAvatarPreview.style.backgroundImage = `url(${tempAvatarUrl})`; }
-        else {
-            DOM.settings.editorAvatarPreview.style.background = u.avatarColor;
+            if (DOM.settings.editManagerSelect) DOM.settings.editManagerSelect.value = u.managerId || '';
+
+            // Populate Locations
+            const locs = u.locations || [{}, {}, {}];
+            if (DOM.settings.editLoc1Label) {
+                DOM.settings.editLoc1Label.value = locs[0]?.label || '';
+                document.getElementById('edit-loc1-addr').value = locs[0]?.addr || '';
+                DOM.settings.editLoc1Lat.value = locs[0]?.lat || '';
+                DOM.settings.editLoc1Lng.value = locs[0]?.lng || '';
+            }
+            if (DOM.settings.editLoc2Label) {
+                DOM.settings.editLoc2Label.value = locs[1]?.label || '';
+                document.getElementById('edit-loc2-addr').value = locs[1]?.addr || '';
+                DOM.settings.editLoc2Lat.value = locs[1]?.lat || '';
+                DOM.settings.editLoc2Lng.value = locs[1]?.lng || '';
+            }
+            if (DOM.settings.editLoc3Label) {
+                DOM.settings.editLoc3Label.value = locs[2]?.label || '';
+                document.getElementById('edit-loc3-addr').value = locs[2]?.addr || '';
+                DOM.settings.editLoc3Lat.value = locs[2]?.lat || '';
+                DOM.settings.editLoc3Lng.value = locs[2]?.lng || '';
+            }
+
+            // Permissions
+            const perms = u.permissions || {};
+            if (DOM.settings.permApprove) DOM.settings.permApprove.checked = perms.approve || false;
+            if (DOM.settings.permSchedule) DOM.settings.permSchedule.checked = perms.schedule || false;
+            if (DOM.settings.permManage) DOM.settings.permManage.checked = perms.manageUser || false;
+            if (DOM.settings.permSuper) DOM.settings.permSuper.checked = perms.superAdmin || false;
+
+            tempAvatarUrl = u.avatarUrl || '';
+            if (tempAvatarUrl) { DOM.settings.editorAvatarPreview.style.backgroundImage = `url(${tempAvatarUrl})`; }
+            else {
+                DOM.settings.editorAvatarPreview.style.background = u.avatarColor;
+                DOM.settings.editorAvatarPreview.style.backgroundImage = 'none';
+                DOM.settings.editorAvatarPreview.textContent = u.shortname;
+            }
+            DOM.settings.btnDeleteMember.classList.remove('hidden');
+        } else { // Add
+            DOM.settings.editorTitle.textContent = "新增成員";
+            DOM.settings.editUsername.value = '';
+            DOM.settings.editPassword.value = '';
+            DOM.settings.editChiname.value = '';
+            if (DOM.settings.editEmail) DOM.settings.editEmail.value = '';
+
+            // Clear Locations
+            if (DOM.settings.editLoc1Label) {
+                DOM.settings.editLoc1Label.value = ''; document.getElementById('edit-loc1-addr').value = ''; DOM.settings.editLoc1Lat.value = ''; DOM.settings.editLoc1Lng.value = '';
+                DOM.settings.editLoc2Label.value = ''; document.getElementById('edit-loc2-addr').value = ''; DOM.settings.editLoc2Lat.value = ''; DOM.settings.editLoc2Lng.value = '';
+                DOM.settings.editLoc3Label.value = ''; document.getElementById('edit-loc3-addr').value = ''; DOM.settings.editLoc3Lat.value = ''; DOM.settings.editLoc3Lng.value = '';
+            }
+            DOM.settings.editBirthday.value = '';
+            DOM.settings.editNickname.value = '';
+            DOM.settings.editShortname.value = '';
+            DOM.settings.editDepartment.value = '';
+            if (DOM.settings.editManagerSelect) DOM.settings.editManagerSelect.value = '';
+
+            // Permissions
+            if (DOM.settings.permApprove) DOM.settings.permApprove.checked = false;
+            if (DOM.settings.permSchedule) DOM.settings.permSchedule.checked = false;
+            if (DOM.settings.permManage) DOM.settings.permManage.checked = false;
+            if (DOM.settings.permSuper) DOM.settings.permSuper.checked = false;
+
+            DOM.settings.editorAvatarPreview.style.background = '#cbd5e1';
             DOM.settings.editorAvatarPreview.style.backgroundImage = 'none';
-            DOM.settings.editorAvatarPreview.textContent = u.shortname;
+            DOM.settings.editorAvatarPreview.textContent = '';
+            DOM.settings.btnDeleteMember.classList.add('hidden');
         }
-        DOM.settings.btnDeleteMember.classList.remove('hidden');
-    } else { // Add
-        DOM.settings.editorTitle.textContent = "新增成員";
-        DOM.settings.editUsername.value = '';
-        DOM.settings.editPassword.value = '';
-        DOM.settings.editChiname.value = '';
-        if (DOM.settings.editEmail) DOM.settings.editEmail.value = '';
-
-        // Clear Locations
-        if (DOM.settings.editLoc1Label) {
-            DOM.settings.editLoc1Label.value = ''; document.getElementById('edit-loc1-addr').value = ''; DOM.settings.editLoc1Lat.value = ''; DOM.settings.editLoc1Lng.value = '';
-            DOM.settings.editLoc2Label.value = ''; document.getElementById('edit-loc2-addr').value = ''; DOM.settings.editLoc2Lat.value = ''; DOM.settings.editLoc2Lng.value = '';
-            DOM.settings.editLoc3Label.value = ''; document.getElementById('edit-loc3-addr').value = ''; DOM.settings.editLoc3Lat.value = ''; DOM.settings.editLoc3Lng.value = '';
-        }
-        DOM.settings.editBirthday.value = '';
-        DOM.settings.editNickname.value = '';
-        DOM.settings.editShortname.value = '';
-        DOM.settings.editDepartment.value = '';
-        if (DOM.settings.editManagerSelect) DOM.settings.editManagerSelect.value = '';
-
-        // Permissions
-        if (DOM.settings.permApprove) DOM.settings.permApprove.checked = false;
-        if (DOM.settings.permSchedule) DOM.settings.permSchedule.checked = false;
-        if (DOM.settings.permManage) DOM.settings.permManage.checked = false;
-        if (DOM.settings.permSuper) DOM.settings.permSuper.checked = false;
-
-        DOM.settings.editorAvatarPreview.style.background = '#cbd5e1';
-        DOM.settings.editorAvatarPreview.style.backgroundImage = 'none';
-        DOM.settings.editorAvatarPreview.textContent = '';
-        DOM.settings.btnDeleteMember.classList.add('hidden');
     }
-}
 
-function renderTeamSettings() {
-    if (!DOM.settings.teamList) return;
-    DOM.settings.teamList.innerHTML = '';
-    appState.users.forEach(user => {
-        const li = document.createElement('li');
-        li.className = 'settings-item';
-        let avatarHtml = `<div class="user-avatar" style="background: ${user.avatarColor}">${user.shortname || user.nickname?.substring(0, 1) || 'U'}</div>`;
-        if (user.avatarUrl) avatarHtml = `<div class="user-avatar" style="background-image: url(${user.avatarUrl}); background-size: cover; color: transparent;"></div>`;
+    function renderTeamSettings() {
+        if (!DOM.settings.teamList) return;
+        DOM.settings.teamList.innerHTML = '';
+        appState.users.forEach(user => {
+            const li = document.createElement('li');
+            li.className = 'settings-item';
+            let avatarHtml = `<div class="user-avatar" style="background: ${user.avatarColor}">${user.shortname || user.nickname?.substring(0, 1) || 'U'}</div>`;
+            if (user.avatarUrl) avatarHtml = `<div class="user-avatar" style="background-image: url(${user.avatarUrl}); background-size: cover; color: transparent;"></div>`;
 
-        li.innerHTML = `
+            li.innerHTML = `
                 <div class="settings-user-info">
                     ${avatarHtml}
                     <div>
@@ -1543,101 +1544,101 @@ function renderTeamSettings() {
                     <button class="btn-secondary" style="padding:0.3rem 0.6rem; font-size:0.85rem;" id="btn-edit-${user.id}">編輯</button>
                 </div>
             `;
-        li.querySelector(`#btn-edit-${user.id}`).addEventListener('click', () => showTeamEditor(user.id));
-        DOM.settings.teamList.appendChild(li);
-    });
-}
-
-// --- Init & Event Listeners ---
-if (DOM.loginForm) DOM.loginForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    const username = DOM.usernameInput.value;
-    const password = DOM.loginPasswordInput.value;
-    if (appState.login(username, password)) { switchScreen('dashboard'); renderDashboard(); }
-    else { alert('登入失敗：找不到使用者或密碼錯誤'); }
-});
-if (DOM.userDisplay.logoutBtn) DOM.userDisplay.logoutBtn.addEventListener('click', () => { appState.logout(); switchScreen('login'); });
-if (DOM.userDisplay.settingsBtn) DOM.userDisplay.settingsBtn.addEventListener('click', () => {
-    openSettings();
-});
-
-if (DOM.settings.btnGenerateReport) DOM.settings.btnGenerateReport.addEventListener('click', generateReportPreview);
-if (DOM.settings.btnExportExcel) DOM.settings.btnExportExcel.addEventListener('click', exportReportToExcel);
-
-function generateReportPreview() {
-    const monthVal = DOM.settings.reportMonth.value;
-    const userId = DOM.settings.reportUser.value;
-    if (!monthVal) { alert('請選擇月份'); return; }
-
-    const data = getReportData(monthVal, userId);
-    renderReportTable(data);
-    DOM.settings.btnExportExcel.style.display = data.length > 0 ? 'block' : 'none';
-
-    // Store for export
-    appState.currentReportData = data;
-    appState.currentReportMeta = { month: monthVal, userId };
-}
-
-function getReportData(monthStr, userId) {
-    // monthStr is "YYYY-MM"
-    const rows = [];
-
-    appState.applications.forEach(app => {
-        if (app.type !== 'expense') return; // Include pending? Maybe. Let's default to all expense apps for now so they can see progress. Or filter approved.
-        // Screenshot shows confirmed expenses. Let's assume Valid applications (Approved or Pending). Rejected should be excluded.
-        if (app.status === 'rejected') return;
-
-        if (userId && app.userId !== userId) return;
-
-        const u = appState.users.find(x => x.id === app.userId);
-        const userName = u ? (u.chiname || u.name) : 'Unknown';
-
-        if (app.data.items) {
-            app.data.items.forEach(item => {
-                // item.date is "YYYY-MM-DD" or similar
-                if (item.date && item.date.startsWith(monthStr)) {
-                    // Build Row
-
-                    // Format Description: Traffic "A-B" or "A到B" -> "(A-->B)"
-                    let desc = item.desc || '';
-                    if (item.cat === 'traffic') {
-                        // 1. Regex matches "X-Y" or "X到Y"
-                        // Group 1: Start, Group 2: End (Ignoring spaces/commas)
-                        // Replacing with "(X-->Y)"
-                        desc = desc.replace(/([^\s\uff0c,\-]+)(?:\s*[-到]\s*)([^\s\uff0c,\-]+)/g, '($1-->$2)');
-                    }
-
-                    rows.push({
-                        date: item.date,
-                        amount: item.amount,
-                        income: 0,
-                        // Format: "Name, Reason, Desc, Amount"
-                        note: `${userName}, ${app.data.reason || ''}, ${desc} ,${item.amount}元`,
-                        voucherId: '',
-                        voucherType: item.voucherType || ''
-                    });
-                }
-            });
-        }
-    });
-
-    // Sort by Date
-    rows.sort((a, b) => a.date.localeCompare(b.date));
-    return rows;
-}
-
-function renderReportTable(rows) {
-    const tbody = DOM.settings.reportPreviewTable.querySelector('tbody');
-    tbody.innerHTML = '';
-    if (rows.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">尚無資料</td></tr>';
-        return;
+            li.querySelector(`#btn-edit-${user.id}`).addEventListener('click', () => showTeamEditor(user.id));
+            DOM.settings.teamList.appendChild(li);
+        });
     }
 
-    let total = 0;
-    rows.forEach(r => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
+    // --- Init & Event Listeners ---
+    if (DOM.loginForm) DOM.loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = DOM.usernameInput.value;
+        const password = DOM.loginPasswordInput.value;
+        if (appState.login(username, password)) { switchScreen('dashboard'); renderDashboard(); }
+        else { alert('登入失敗：找不到使用者或密碼錯誤'); }
+    });
+    if (DOM.userDisplay.logoutBtn) DOM.userDisplay.logoutBtn.addEventListener('click', () => { appState.logout(); switchScreen('login'); });
+    if (DOM.userDisplay.settingsBtn) DOM.userDisplay.settingsBtn.addEventListener('click', () => {
+        openSettings();
+    });
+
+    if (DOM.settings.btnGenerateReport) DOM.settings.btnGenerateReport.addEventListener('click', generateReportPreview);
+    if (DOM.settings.btnExportExcel) DOM.settings.btnExportExcel.addEventListener('click', exportReportToExcel);
+
+    function generateReportPreview() {
+        const monthVal = DOM.settings.reportMonth.value;
+        const userId = DOM.settings.reportUser.value;
+        if (!monthVal) { alert('請選擇月份'); return; }
+
+        const data = getReportData(monthVal, userId);
+        renderReportTable(data);
+        DOM.settings.btnExportExcel.style.display = data.length > 0 ? 'block' : 'none';
+
+        // Store for export
+        appState.currentReportData = data;
+        appState.currentReportMeta = { month: monthVal, userId };
+    }
+
+    function getReportData(monthStr, userId) {
+        // monthStr is "YYYY-MM"
+        const rows = [];
+
+        appState.applications.forEach(app => {
+            if (app.type !== 'expense') return; // Include pending? Maybe. Let's default to all expense apps for now so they can see progress. Or filter approved.
+            // Screenshot shows confirmed expenses. Let's assume Valid applications (Approved or Pending). Rejected should be excluded.
+            if (app.status === 'rejected') return;
+
+            if (userId && app.userId !== userId) return;
+
+            const u = appState.users.find(x => x.id === app.userId);
+            const userName = u ? (u.chiname || u.name) : 'Unknown';
+
+            if (app.data.items) {
+                app.data.items.forEach(item => {
+                    // item.date is "YYYY-MM-DD" or similar
+                    if (item.date && item.date.startsWith(monthStr)) {
+                        // Build Row
+
+                        // Format Description: Traffic "A-B" or "A到B" -> "(A-->B)"
+                        let desc = item.desc || '';
+                        if (item.cat === 'traffic') {
+                            // 1. Regex matches "X-Y" or "X到Y"
+                            // Group 1: Start, Group 2: End (Ignoring spaces/commas)
+                            // Replacing with "(X-->Y)"
+                            desc = desc.replace(/([^\s\uff0c,\-]+)(?:\s*[-到]\s*)([^\s\uff0c,\-]+)/g, '($1-->$2)');
+                        }
+
+                        rows.push({
+                            date: item.date,
+                            amount: item.amount,
+                            income: 0,
+                            // Format: "Name, Reason, Desc, Amount"
+                            note: `${userName}, ${app.data.reason || ''}, ${desc} ,${item.amount}元`,
+                            voucherId: '',
+                            voucherType: item.voucherType || ''
+                        });
+                    }
+                });
+            }
+        });
+
+        // Sort by Date
+        rows.sort((a, b) => a.date.localeCompare(b.date));
+        return rows;
+    }
+
+    function renderReportTable(rows) {
+        const tbody = DOM.settings.reportPreviewTable.querySelector('tbody');
+        tbody.innerHTML = '';
+        if (rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">尚無資料</td></tr>';
+            return;
+        }
+
+        let total = 0;
+        rows.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
                 <td>${r.date}</td>
                 <td>${parseInt(r.amount).toLocaleString()}</td>
                 <td>0</td>
@@ -1645,15 +1646,15 @@ function renderReportTable(rows) {
                 <td></td>
                 <td>${r.voucherType}</td>
             `;
-        tbody.appendChild(tr);
-        total += parseInt(r.amount);
-    });
+            tbody.appendChild(tr);
+            total += parseInt(r.amount);
+        });
 
-    // Total Row
-    const trTotal = document.createElement('tr');
-    trTotal.style.fontWeight = 'bold';
-    trTotal.style.background = '#f1f5f9';
-    trTotal.innerHTML = `
+        // Total Row
+        const trTotal = document.createElement('tr');
+        trTotal.style.fontWeight = 'bold';
+        trTotal.style.background = '#f1f5f9';
+        trTotal.innerHTML = `
             <td></td>
             <td style="color:#b91c1c;">${total.toLocaleString()}</td>
             <td></td>
@@ -1661,24 +1662,24 @@ function renderReportTable(rows) {
             <td></td>
             <td></td>
         `;
-    tbody.appendChild(trTotal);
-}
-
-function exportReportToExcel() {
-    const data = appState.currentReportData;
-    if (!data || data.length === 0) return;
-
-    const { month, userId } = appState.currentReportMeta;
-    let title = `${month.replace('-', '年')}月`;
-    if (userId) {
-        const u = appState.users.find(x => x.id === userId);
-        if (u) title += ` ${u.chiname || u.name}`;
-    } else {
-        title += ' 全體出差費用彙整';
+        tbody.appendChild(trTotal);
     }
 
-    // Generate HTML for Excel
-    let tableHtml = `
+    function exportReportToExcel() {
+        const data = appState.currentReportData;
+        if (!data || data.length === 0) return;
+
+        const { month, userId } = appState.currentReportMeta;
+        let title = `${month.replace('-', '年')}月`;
+        if (userId) {
+            const u = appState.users.find(x => x.id === userId);
+            if (u) title += ` ${u.chiname || u.name}`;
+        } else {
+            title += ' 全體出差費用彙整';
+        }
+
+        // Generate HTML for Excel
+        let tableHtml = `
             <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
             <head>
                 <!--[if gte mso 9]>
@@ -1715,9 +1716,9 @@ function exportReportToExcel() {
                 </tr>
         `;
 
-    let total = 0;
-    data.forEach(r => {
-        tableHtml += `
+        let total = 0;
+        data.forEach(r => {
+            tableHtml += `
                 <tr>
                     <td style='mso-number-format:"Short Date";'>${r.date.replace(/-/g, '/')}</td>
                     <td style='mso-number-format:"#,##0";'>${r.amount}</td>
@@ -1727,1139 +1728,1139 @@ function exportReportToExcel() {
                     <td>${r.voucherType}</td>
                 </tr>
             `;
-        total += parseInt(r.amount);
-    });
+            total += parseInt(r.amount);
+        });
 
-    tableHtml += `
+        tableHtml += `
             <tr>
                 <td></td>
                 <td style="color:red; font-weight:bold; mso-number-format:'#\,##0';">${total}</td>
                 <td></td><td></td><td></td><td></td>
             </tr>
         `;
-    tableHtml += `</table></body></html>`;
+        tableHtml += `</table></body></html>`;
 
-    const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `出差費用_${title}.xls`;
-    a.click();
-}
-
-// Calendar Navigation (Restored)
-if (DOM.calendar.prevBtn) DOM.calendar.prevBtn.addEventListener('click', () => {
-    appState.currentDate.setMonth(appState.currentDate.getMonth() - 1);
-    renderCalendar();
-});
-if (DOM.calendar.nextBtn) DOM.calendar.nextBtn.addEventListener('click', () => {
-    appState.currentDate.setMonth(appState.currentDate.getMonth() + 1);
-    renderCalendar();
-});
-DOM.calendar.todayBtn.addEventListener('click', () => {
-    appState.currentDate = new Date();
-    appState.selectedDate = new Date();
-    renderCalendar();
-    updateSidebar();
-});
-
-// Settings Tabs
-DOM.settings.tabBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        DOM.settings.tabBtns.forEach(b => b.classList.remove('active'));
-        DOM.settings.tabContents.forEach(c => c.classList.remove('active'));
-        btn.classList.add('active');
-        const targetId = btn.getAttribute('data-tab');
-        const targetContent = document.getElementById(targetId);
-        if (targetContent) targetContent.classList.add('active');
-    });
-});
-
-function openSettings() {
-    try {
-        console.log("Opening Settings...");
-        const u = appState.currentUser;
-
-        // --- 1. Basic Profile Population ---
-        if (u) {
-            if (DOM.settings.nicknameInput) DOM.settings.nicknameInput.value = u.nickname || '';
-            if (DOM.settings.adminCheck) DOM.settings.adminCheck.checked = appState.isAdminMode;
-
-            // Avatar Preview
-            if (DOM.settings.avatarPreview) {
-                if (u.avatarUrl) {
-                    DOM.settings.avatarPreview.style.backgroundImage = `url(${u.avatarUrl})`;
-                    DOM.settings.avatarPreview.textContent = '';
-                } else {
-                    DOM.settings.avatarPreview.style.background = u.avatarColor;
-                    DOM.settings.avatarPreview.style.backgroundImage = 'none';
-                    DOM.settings.avatarPreview.textContent = u.shortname || u.nickname?.substring(0, 1) || 'U';
-                }
-            }
-        }
-
-        showTeamList();
-
-        // --- 2. Reports Tab Logic ---
-        if (DOM.settings.reportUser) {
-            // Save current selection if rewriting
-            const currentSel = DOM.settings.reportUser.value;
-            DOM.settings.reportUser.innerHTML = '<option value="">全部人員</option>';
-            if (appState.users) {
-                appState.users.forEach(u => {
-                    const op = document.createElement('option');
-                    op.value = u.id;
-                    op.textContent = `${u.chiname || u.name}`;
-                    DOM.settings.reportUser.appendChild(op);
-                });
-            }
-            if (currentSel) DOM.settings.reportUser.value = currentSel;
-
-            // Set Default Month
-            const now = new Date();
-            const mStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            if (DOM.settings.reportMonth && !DOM.settings.reportMonth.value) DOM.settings.reportMonth.value = mStr;
-        }
-
-        // --- 3. Permissions Enforcement ---
-        if (u) {
-            const perms = u.permissions || { approve: false, schedule: false, manageUser: false };
-
-            // Team Tab & Backup
-            const teamTabBtn = document.querySelector('.tab-btn[data-tab="tab-team"]');
-            if (teamTabBtn) {
-                teamTabBtn.style.display = perms.manageUser ? 'block' : 'none';
-                if (!perms.manageUser && teamTabBtn.classList.contains('active')) {
-                    const profileBtn = document.querySelector('.tab-btn[data-tab="tab-profile"]');
-                    if (profileBtn) profileBtn.click();
-                }
-            }
-
-            // Reports Tab
-            if (DOM.settings.tabBtnReports) {
-                DOM.settings.tabBtnReports.style.display = (perms.manageUser || perms.superAdmin) ? 'block' : 'none';
-            }
-
-            // Admin/Schedule Mode
-            if (DOM.settings.adminCheck) {
-                const container = DOM.settings.adminCheck.closest('.form-group');
-                if (container) container.style.display = perms.schedule ? 'flex' : 'none';
-            }
-
-            // Backup Section
-            const backupSec = document.getElementById('backup-section');
-            if (backupSec) {
-                backupSec.style.display = perms.manageUser ? 'block' : 'none';
-            }
-        }
-
-        DOM.settings.modal.classList.add('active');
-    } catch (err) {
-        console.error(err);
-        alert('開啟設定時發生錯誤: ' + err.message);
-    }
-}
-
-window.openSettings = openSettings;
-
-if (DOM.settings.closeBtn) DOM.settings.closeBtn.addEventListener('click', () => DOM.settings.modal.classList.remove('active'));
-
-// Team Manager Events
-if (DOM.settings.btnAddMember) DOM.settings.btnAddMember.addEventListener('click', () => showTeamEditor(null));
-if (DOM.settings.btnBackTeam) DOM.settings.btnBackTeam.addEventListener('click', showTeamList);
-if (DOM.settings.btnCancelEdit) DOM.settings.btnCancelEdit.addEventListener('click', showTeamList);
-
-if (DOM.settings.btnSaveMember) DOM.settings.btnSaveMember.addEventListener('click', () => {
-    const username = DOM.settings.editUsername.value.trim();
-    const chiname = DOM.settings.editChiname.value.trim();
-    if (!username || !chiname) { alert('請填寫帳號與中文姓名'); return; }
-
-    const passwordVal = DOM.settings.editPassword.value.trim();
-    const data = {
-        username, chiname,
-        email: DOM.settings.editEmail ? DOM.settings.editEmail.value.trim() : '',
-        birthday: DOM.settings.editBirthday.value,
-        nickname: DOM.settings.editNickname.value.trim(),
-        shortname: DOM.settings.editShortname.value.trim(),
-        title: DOM.settings.editDepartment.value,
-        managerId: DOM.settings.editManagerSelect ? DOM.settings.editManagerSelect.value : '',
-        avatarUrl: tempAvatarUrl,
-        locations: [
-            {
-                label: DOM.settings.editLoc1Label.value.trim(),
-                addr: document.getElementById('edit-loc1-addr').value.trim(),
-                lat: DOM.settings.editLoc1Lat.value.trim(),
-                lng: DOM.settings.editLoc1Lng.value.trim()
-            },
-            {
-                label: DOM.settings.editLoc2Label.value.trim(),
-                addr: document.getElementById('edit-loc2-addr').value.trim(),
-                lat: DOM.settings.editLoc2Lat.value.trim(),
-                lng: DOM.settings.editLoc2Lng.value.trim()
-            },
-            {
-                label: DOM.settings.editLoc3Label.value.trim(),
-                addr: document.getElementById('edit-loc3-addr').value.trim(),
-                lat: DOM.settings.editLoc3Lat.value.trim(),
-                lng: DOM.settings.editLoc3Lng.value.trim()
-            }
-        ],
-        permissions: {
-            approve: DOM.settings.permApprove ? DOM.settings.permApprove.checked : false,
-            schedule: DOM.settings.permSchedule ? DOM.settings.permSchedule.checked : false,
-            manageUser: DOM.settings.permManage ? DOM.settings.permManage.checked : false,
-            superAdmin: DOM.settings.permSuper ? DOM.settings.permSuper.checked : false
-        }
-    };
-
-    if (passwordVal) {
-        data.password = passwordVal;
-    }
-
-    if (editingUserId) { appState.updateUser(editingUserId, data); alert('更新成功'); }
-    else { appState.addUser(data); alert('新增成功'); }
-    showTeamList(); renderDashboard();
-});
-if (DOM.settings.btnDeleteMember) DOM.settings.btnDeleteMember.addEventListener('click', () => {
-    if (confirm('確定要刪除此成員嗎？此動作無法復原。')) { appState.deleteUser(editingUserId); showTeamList(); renderDashboard(); }
-});
-
-// Geocoding Helper
-window.getGeo = async function (index) {
-    const addrInput = document.getElementById(`edit-loc${index}-addr`);
-    const latInput = document.getElementById(`edit-loc${index}-lat`);
-    const lngInput = document.getElementById(`edit-loc${index}-lng`);
-
-    // Initial setup
-    const originalAddress = addrInput.value.trim();
-    if (!originalAddress) { alert('請先輸入地址'); return; }
-
-    const btn = document.getElementById(`btn-geo-${index}`);
-    const oldText = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 查詢中...';
-
-    // Helper for fetch
-    const searchOSM = async (q) => {
-        try {
-            // Add limit=1 to speed up
-            const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
-            const res = await fetch(url);
-            return await res.json();
-        } catch (e) { return []; }
-    };
-
-    try {
-        // 1. Try Exact Match
-        let data = await searchOSM(originalAddress);
-        let resultAddress = originalAddress;
-        let note = "";
-
-        // 2. Fallback: Try removing specific House Number (e.g. 12號, 12-1號)
-        if (!data || data.length === 0) {
-            // Regex to remove trailing numbers + char (號/樓/F)
-            const fallbackAddress = originalAddress.replace(/\d+[-~\d]*[號樓Ff].*$/, '');
-            if (fallbackAddress && fallbackAddress !== originalAddress) {
-                data = await searchOSM(fallbackAddress);
-                if (data && data.length > 0) {
-                    resultAddress = fallbackAddress;
-                    note = ` (已為您定位至附近: ${fallbackAddress})`;
-                }
-            }
-        }
-
-        // 3. Fallback: Try removing Alley/Lane numbers if still empty
-        if (!data || data.length === 0) {
-            const roadOnly = originalAddress.replace(/\d+[-~\d]*[巷弄].*$/, '');
-            if (roadOnly && roadOnly !== originalAddress && roadOnly !== resultAddress) {
-                data = await searchOSM(roadOnly);
-                if (data && data.length > 0) {
-                    resultAddress = roadOnly;
-                    note = ` (已為您定位至路段: ${roadOnly})`;
-                }
-            }
-        }
-
-        if (data && data.length > 0) {
-            latInput.value = parseFloat(data[0].lat).toFixed(6);
-            lngInput.value = parseFloat(data[0].lon).toFixed(6);
-            if (note) alert(`提示: 找不到精確門牌，${note}。請確認位置是否正確。`);
-        } else {
-            alert('找不到此地址的座標，請嘗試只輸入路名或附近地標。');
-        }
-    } catch (e) {
-        console.error(e);
-        alert('抓取座標失敗，請檢查網路連線或稍後再試');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = oldText;
-    }
-}
-
-// Attach listeners to geo buttons
-for (let i = 1; i <= 3; i++) {
-    const btn = document.getElementById(`btn-geo-${i}`);
-    if (btn) btn.onclick = () => getGeo(i);
-}
-// Avatar Inputs
-if (DOM.settings.editorAvatarInput) {
-    DOM.settings.editorAvatarInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function (evt) {
-                tempAvatarUrl = evt.target.result;
-                DOM.settings.editorAvatarPreview.style.backgroundImage = `url(${tempAvatarUrl})`;
-                DOM.settings.editorAvatarPreview.textContent = '';
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-}
-if (DOM.settings.editorRemoveAvatar) {
-    DOM.settings.editorRemoveAvatar.addEventListener('click', () => {
-        tempAvatarUrl = '';
-        DOM.settings.editorAvatarPreview.style.backgroundImage = 'none';
-        DOM.settings.editorAvatarPreview.style.background = '#cbd5e1';
-    });
-}
-
-// Standard Events
-if (DOM.stats.btn) DOM.stats.btn.addEventListener('click', () => { renderStats(); DOM.stats.modal.classList.add('active'); });
-if (DOM.stats.closeBtn) DOM.stats.closeBtn.addEventListener('click', () => DOM.stats.modal.classList.remove('active'));
-
-// Data Backup Logic
-if (document.getElementById('btn-export-data')) {
-    document.getElementById('btn-export-data').addEventListener('click', () => {
-        const data = {
-            users: localStorage.getItem('officePulse_users_v4'),
-            attendance: localStorage.getItem('officePulse_attendance_v4'),
-            events: localStorage.getItem('officePulse_events_v1')
-        };
-        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+        const blob = new Blob([tableHtml], { type: 'application/vnd.ms-excel' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `office_pulse_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        a.download = `出差費用_${title}.xls`;
         a.click();
-    });
-}
+    }
 
-if (document.getElementById('btn-import-data')) {
-    document.getElementById('btn-import-data').addEventListener('click', () => document.getElementById('import-file-input').click());
-    document.getElementById('import-file-input').addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            try {
-                const data = JSON.parse(evt.target.result);
-                if (data.users) localStorage.setItem('officePulse_users_v4', data.users);
-                if (data.attendance) localStorage.setItem('officePulse_attendance_v4', data.attendance);
-                if (data.events) localStorage.setItem('officePulse_events_v1', data.events);
-                alert('資料匯入成功！系統將重新整理...');
-                location.reload();
-            } catch (err) {
-                alert('匯入失敗：檔案格式錯誤');
+    // Calendar Navigation (Restored)
+    if (DOM.calendar.prevBtn) DOM.calendar.prevBtn.addEventListener('click', () => {
+        appState.currentDate.setMonth(appState.currentDate.getMonth() - 1);
+        renderCalendar();
+    });
+    if (DOM.calendar.nextBtn) DOM.calendar.nextBtn.addEventListener('click', () => {
+        appState.currentDate.setMonth(appState.currentDate.getMonth() + 1);
+        renderCalendar();
+    });
+    DOM.calendar.todayBtn.addEventListener('click', () => {
+        appState.currentDate = new Date();
+        appState.selectedDate = new Date();
+        renderCalendar();
+        updateSidebar();
+    });
+
+    // Settings Tabs
+    DOM.settings.tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            DOM.settings.tabBtns.forEach(b => b.classList.remove('active'));
+            DOM.settings.tabContents.forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            const targetId = btn.getAttribute('data-tab');
+            const targetContent = document.getElementById(targetId);
+            if (targetContent) targetContent.classList.add('active');
+        });
+    });
+
+    function openSettings() {
+        try {
+            console.log("Opening Settings...");
+            const u = appState.currentUser;
+
+            // --- 1. Basic Profile Population ---
+            if (u) {
+                if (DOM.settings.nicknameInput) DOM.settings.nicknameInput.value = u.nickname || '';
+                if (DOM.settings.adminCheck) DOM.settings.adminCheck.checked = appState.isAdminMode;
+
+                // Avatar Preview
+                if (DOM.settings.avatarPreview) {
+                    if (u.avatarUrl) {
+                        DOM.settings.avatarPreview.style.backgroundImage = `url(${u.avatarUrl})`;
+                        DOM.settings.avatarPreview.textContent = '';
+                    } else {
+                        DOM.settings.avatarPreview.style.background = u.avatarColor;
+                        DOM.settings.avatarPreview.style.backgroundImage = 'none';
+                        DOM.settings.avatarPreview.textContent = u.shortname || u.nickname?.substring(0, 1) || 'U';
+                    }
+                }
+            }
+
+            showTeamList();
+
+            // --- 2. Reports Tab Logic ---
+            if (DOM.settings.reportUser) {
+                // Save current selection if rewriting
+                const currentSel = DOM.settings.reportUser.value;
+                DOM.settings.reportUser.innerHTML = '<option value="">全部人員</option>';
+                if (appState.users) {
+                    appState.users.forEach(u => {
+                        const op = document.createElement('option');
+                        op.value = u.id;
+                        op.textContent = `${u.chiname || u.name}`;
+                        DOM.settings.reportUser.appendChild(op);
+                    });
+                }
+                if (currentSel) DOM.settings.reportUser.value = currentSel;
+
+                // Set Default Month
+                const now = new Date();
+                const mStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                if (DOM.settings.reportMonth && !DOM.settings.reportMonth.value) DOM.settings.reportMonth.value = mStr;
+            }
+
+            // --- 3. Permissions Enforcement ---
+            if (u) {
+                const perms = u.permissions || { approve: false, schedule: false, manageUser: false };
+
+                // Team Tab & Backup
+                const teamTabBtn = document.querySelector('.tab-btn[data-tab="tab-team"]');
+                if (teamTabBtn) {
+                    teamTabBtn.style.display = perms.manageUser ? 'block' : 'none';
+                    if (!perms.manageUser && teamTabBtn.classList.contains('active')) {
+                        const profileBtn = document.querySelector('.tab-btn[data-tab="tab-profile"]');
+                        if (profileBtn) profileBtn.click();
+                    }
+                }
+
+                // Reports Tab
+                if (DOM.settings.tabBtnReports) {
+                    DOM.settings.tabBtnReports.style.display = (perms.manageUser || perms.superAdmin) ? 'block' : 'none';
+                }
+
+                // Admin/Schedule Mode
+                if (DOM.settings.adminCheck) {
+                    const container = DOM.settings.adminCheck.closest('.form-group');
+                    if (container) container.style.display = perms.schedule ? 'flex' : 'none';
+                }
+
+                // Backup Section
+                const backupSec = document.getElementById('backup-section');
+                if (backupSec) {
+                    backupSec.style.display = perms.manageUser ? 'block' : 'none';
+                }
+            }
+
+            DOM.settings.modal.classList.add('active');
+        } catch (err) {
+            console.error(err);
+            alert('開啟設定時發生錯誤: ' + err.message);
+        }
+    }
+
+    window.openSettings = openSettings;
+
+    if (DOM.settings.closeBtn) DOM.settings.closeBtn.addEventListener('click', () => DOM.settings.modal.classList.remove('active'));
+
+    // Team Manager Events
+    if (DOM.settings.btnAddMember) DOM.settings.btnAddMember.addEventListener('click', () => showTeamEditor(null));
+    if (DOM.settings.btnBackTeam) DOM.settings.btnBackTeam.addEventListener('click', showTeamList);
+    if (DOM.settings.btnCancelEdit) DOM.settings.btnCancelEdit.addEventListener('click', showTeamList);
+
+    if (DOM.settings.btnSaveMember) DOM.settings.btnSaveMember.addEventListener('click', () => {
+        const username = DOM.settings.editUsername.value.trim();
+        const chiname = DOM.settings.editChiname.value.trim();
+        if (!username || !chiname) { alert('請填寫帳號與中文姓名'); return; }
+
+        const passwordVal = DOM.settings.editPassword.value.trim();
+        const data = {
+            username, chiname,
+            email: DOM.settings.editEmail ? DOM.settings.editEmail.value.trim() : '',
+            birthday: DOM.settings.editBirthday.value,
+            nickname: DOM.settings.editNickname.value.trim(),
+            shortname: DOM.settings.editShortname.value.trim(),
+            title: DOM.settings.editDepartment.value,
+            managerId: DOM.settings.editManagerSelect ? DOM.settings.editManagerSelect.value : '',
+            avatarUrl: tempAvatarUrl,
+            locations: [
+                {
+                    label: DOM.settings.editLoc1Label.value.trim(),
+                    addr: document.getElementById('edit-loc1-addr').value.trim(),
+                    lat: DOM.settings.editLoc1Lat.value.trim(),
+                    lng: DOM.settings.editLoc1Lng.value.trim()
+                },
+                {
+                    label: DOM.settings.editLoc2Label.value.trim(),
+                    addr: document.getElementById('edit-loc2-addr').value.trim(),
+                    lat: DOM.settings.editLoc2Lat.value.trim(),
+                    lng: DOM.settings.editLoc2Lng.value.trim()
+                },
+                {
+                    label: DOM.settings.editLoc3Label.value.trim(),
+                    addr: document.getElementById('edit-loc3-addr').value.trim(),
+                    lat: DOM.settings.editLoc3Lat.value.trim(),
+                    lng: DOM.settings.editLoc3Lng.value.trim()
+                }
+            ],
+            permissions: {
+                approve: DOM.settings.permApprove ? DOM.settings.permApprove.checked : false,
+                schedule: DOM.settings.permSchedule ? DOM.settings.permSchedule.checked : false,
+                manageUser: DOM.settings.permManage ? DOM.settings.permManage.checked : false,
+                superAdmin: DOM.settings.permSuper ? DOM.settings.permSuper.checked : false
             }
         };
-        reader.readAsText(file);
-    });
-}
 
-// --- Clock In Logic with Geolocation (Visual Map) ---
-const rawBtnClock = document.getElementById('btn-clock-action');
-if (rawBtnClock) {
-    // [Security Fix] Remove any duplicate/legacy listeners by recreating the element
-    const btnClockAction = rawBtnClock.cloneNode(true);
-    rawBtnClock.parentNode.replaceChild(btnClockAction, rawBtnClock);
-
-    btnClockAction.addEventListener('click', () => {
-        // [Feature] Desktop / Laptop Direct Clock-In Bypassing Map
-        // Logic: If screen width > 768px (Non-mobile), skip map.
-        const isDesktop = window.innerWidth > 768;
-
-        if (isDesktop) {
-            // Direct Clock In for Desktop
-            const todayStr = appState.formatDate(appState.currentDate);
-            let rec = appState.clockRecords[todayStr]?.[appState.currentUser.id];
-
-            // Toggle Logic
-            if (!rec || !rec.in) {
-                // Clock IN
-                const timeStr = appState.clockIn(appState.currentDate, appState.currentUser.id);
-                appState.addSegment(appState.currentDate, {
-                    type: 'office',
-                    start: timeStr,
-                    end: '18:00',
-                    isAllDay: false,
-                    note: `打卡: 電腦版 (${timeStr})`
-                });
-
-                document.getElementById('clock-status-text').textContent = "上班中";
-                document.getElementById('clock-status-text').style.color = "#059669";
-                document.getElementById('clock-time-display').textContent = timeStr;
-                btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
-                btnClockAction.style.background = '#64748b';
-                alert(`電腦版打卡成功！時間: ${timeStr}`);
-            } else if (!rec.out) {
-                // Clock OUT
-                const timeStr = appState.clockOut(appState.currentDate, appState.currentUser.id);
-                alert(`下班打卡成功！時間: ${timeStr}`);
-                document.getElementById('clock-status-text').textContent = "已下班";
-                btnClockAction.innerHTML = '<i class="fa-solid fa-stopwatch"></i> 上班';
-                btnClockAction.style.background = '#3b82f6';
-                document.getElementById('clock-time-display').textContent = "--:--";
-            } else {
-                alert("今日已完成上下班打卡！");
-            }
-
-            renderCalendar();
-            updateSidebar();
-            return;
+        if (passwordVal) {
+            data.password = passwordVal;
         }
 
-        // --- Mobile Flow (Map Required) ---
+        if (editingUserId) { appState.updateUser(editingUserId, data); alert('更新成功'); }
+        else { appState.addUser(data); alert('新增成功'); }
+        showTeamList(); renderDashboard();
+    });
+    if (DOM.settings.btnDeleteMember) DOM.settings.btnDeleteMember.addEventListener('click', () => {
+        if (confirm('確定要刪除此成員嗎？此動作無法復原。')) { appState.deleteUser(editingUserId); showTeamList(); renderDashboard(); }
+    });
 
-        // 1. Check Geolocation Support
-        if (!navigator.geolocation) { alert('您的裝置不支援地理位置功能，無法使用打卡功能。'); return; }
+    // Geocoding Helper
+    window.getGeo = async function (index) {
+        const addrInput = document.getElementById(`edit-loc${index}-addr`);
+        const latInput = document.getElementById(`edit-loc${index}-lat`);
+        const lngInput = document.getElementById(`edit-loc${index}-lng`);
 
+        // Initial setup
+        const originalAddress = addrInput.value.trim();
+        if (!originalAddress) { alert('請先輸入地址'); return; }
 
-        // Open Map Modal
-        const mapModal = document.getElementById('map-modal');
-        const mapFrame = document.getElementById('map-frame');
-        const statusText = document.getElementById('map-status-text');
-        const confirmBtn = document.getElementById('btn-confirm-clock');
+        const btn = document.getElementById(`btn-geo-${index}`);
+        const oldText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 查詢中...';
 
-        mapModal.classList.add('active');
-        statusText.textContent = '🚀 正在獲取您的位置...';
-        statusText.style.color = '#334155';
-        confirmBtn.disabled = true;
-        confirmBtn.style.opacity = '0.5';
-        confirmBtn.onclick = null; // Reset previous listeners
-        mapFrame.src = 'about:blank'; // Reset frame
+        // Helper for fetch
+        const searchOSM = async (q) => {
+            try {
+                // Add limit=1 to speed up
+                const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`;
+                const res = await fetch(url);
+                return await res.json();
+            } catch (e) { return []; }
+        };
 
-        navigator.geolocation.getCurrentPosition(
-            (position) => {
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
+        try {
+            // 1. Try Exact Match
+            let data = await searchOSM(originalAddress);
+            let resultAddress = originalAddress;
+            let note = "";
 
-                // Show Map (OpenStreetMap)
-                mapFrame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${userLng - 0.005},${userLat - 0.005},${userLng + 0.005},${userLat + 0.005}&layer=mapnik&marker=${userLat},${userLng}`;
+            // 2. Fallback: Try removing specific House Number (e.g. 12號, 12-1號)
+            if (!data || data.length === 0) {
+                // Regex to remove trailing numbers + char (號/樓/F)
+                const fallbackAddress = originalAddress.replace(/\d+[-~\d]*[號樓Ff].*$/, '');
+                if (fallbackAddress && fallbackAddress !== originalAddress) {
+                    data = await searchOSM(fallbackAddress);
+                    if (data && data.length > 0) {
+                        resultAddress = fallbackAddress;
+                        note = ` (已為您定位至附近: ${fallbackAddress})`;
+                    }
+                }
+            }
 
-                // 2. Check Distances
-                let matchedLoc = null;
-                let minDistance = 999999;
+            // 3. Fallback: Try removing Alley/Lane numbers if still empty
+            if (!data || data.length === 0) {
+                const roadOnly = originalAddress.replace(/\d+[-~\d]*[巷弄].*$/, '');
+                if (roadOnly && roadOnly !== originalAddress && roadOnly !== resultAddress) {
+                    data = await searchOSM(roadOnly);
+                    if (data && data.length > 0) {
+                        resultAddress = roadOnly;
+                        note = ` (已為您定位至路段: ${roadOnly})`;
+                    }
+                }
+            }
 
-                const u = appState.currentUser;
-                const locs = u.locations || [];
-                const targetLocs = locs.filter(l => l.lat && l.lng);
+            if (data && data.length > 0) {
+                latInput.value = parseFloat(data[0].lat).toFixed(6);
+                lngInput.value = parseFloat(data[0].lon).toFixed(6);
+                if (note) alert(`提示: 找不到精確門牌，${note}。請確認位置是否正確。`);
+            } else {
+                alert('找不到此地址的座標，請嘗試只輸入路名或附近地標。');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('抓取座標失敗，請檢查網路連線或稍後再試');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = oldText;
+        }
+    }
 
-                if (targetLocs.length === 0) {
-                    statusText.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 您尚未設定打卡地點！<br><span style="font-size:0.8rem">請至設定頁面新增地點</span>';
-                    statusText.style.color = '#aa4a44';
-                    return;
+    // Attach listeners to geo buttons
+    for (let i = 1; i <= 3; i++) {
+        const btn = document.getElementById(`btn-geo-${i}`);
+        if (btn) btn.onclick = () => getGeo(i);
+    }
+    // Avatar Inputs
+    if (DOM.settings.editorAvatarInput) {
+        DOM.settings.editorAvatarInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (evt) {
+                    tempAvatarUrl = evt.target.result;
+                    DOM.settings.editorAvatarPreview.style.backgroundImage = `url(${tempAvatarUrl})`;
+                    DOM.settings.editorAvatarPreview.textContent = '';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    if (DOM.settings.editorRemoveAvatar) {
+        DOM.settings.editorRemoveAvatar.addEventListener('click', () => {
+            tempAvatarUrl = '';
+            DOM.settings.editorAvatarPreview.style.backgroundImage = 'none';
+            DOM.settings.editorAvatarPreview.style.background = '#cbd5e1';
+        });
+    }
+
+    // Standard Events
+    if (DOM.stats.btn) DOM.stats.btn.addEventListener('click', () => { renderStats(); DOM.stats.modal.classList.add('active'); });
+    if (DOM.stats.closeBtn) DOM.stats.closeBtn.addEventListener('click', () => DOM.stats.modal.classList.remove('active'));
+
+    // Data Backup Logic
+    if (document.getElementById('btn-export-data')) {
+        document.getElementById('btn-export-data').addEventListener('click', () => {
+            const data = {
+                users: localStorage.getItem('officePulse_users_v4'),
+                attendance: localStorage.getItem('officePulse_attendance_v4'),
+                events: localStorage.getItem('officePulse_events_v1')
+            };
+            const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `office_pulse_backup_${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+        });
+    }
+
+    if (document.getElementById('btn-import-data')) {
+        document.getElementById('btn-import-data').addEventListener('click', () => document.getElementById('import-file-input').click());
+        document.getElementById('import-file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if (data.users) localStorage.setItem('officePulse_users_v4', data.users);
+                    if (data.attendance) localStorage.setItem('officePulse_attendance_v4', data.attendance);
+                    if (data.events) localStorage.setItem('officePulse_events_v1', data.events);
+                    alert('資料匯入成功！系統將重新整理...');
+                    location.reload();
+                } catch (err) {
+                    alert('匯入失敗：檔案格式錯誤');
+                }
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    // --- Clock In Logic with Geolocation (Visual Map) ---
+    const rawBtnClock = document.getElementById('btn-clock-action');
+    if (rawBtnClock) {
+        // [Security Fix] Remove any duplicate/legacy listeners by recreating the element
+        const btnClockAction = rawBtnClock.cloneNode(true);
+        rawBtnClock.parentNode.replaceChild(btnClockAction, rawBtnClock);
+
+        btnClockAction.addEventListener('click', () => {
+            // [Feature] Desktop / Laptop Direct Clock-In Bypassing Map
+            // Logic: If screen width > 768px (Non-mobile), skip map.
+            const isDesktop = window.innerWidth > 768;
+
+            if (isDesktop) {
+                // Direct Clock In for Desktop
+                const todayStr = appState.formatDate(appState.currentDate);
+                let rec = appState.clockRecords[todayStr]?.[appState.currentUser.id];
+
+                // Toggle Logic
+                if (!rec || !rec.in) {
+                    // Clock IN
+                    const timeStr = appState.clockIn(appState.currentDate, appState.currentUser.id);
+                    appState.addSegment(appState.currentDate, {
+                        type: 'office',
+                        start: timeStr,
+                        end: '18:00',
+                        isAllDay: false,
+                        note: `打卡: 電腦版 (${timeStr})`
+                    });
+
+                    document.getElementById('clock-status-text').textContent = "上班中";
+                    document.getElementById('clock-status-text').style.color = "#059669";
+                    document.getElementById('clock-time-display').textContent = timeStr;
+                    btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
+                    btnClockAction.style.background = '#64748b';
+                    alert(`電腦版打卡成功！時間: ${timeStr}`);
+                } else if (!rec.out) {
+                    // Clock OUT
+                    const timeStr = appState.clockOut(appState.currentDate, appState.currentUser.id);
+                    alert(`下班打卡成功！時間: ${timeStr}`);
+                    document.getElementById('clock-status-text').textContent = "已下班";
+                    btnClockAction.innerHTML = '<i class="fa-solid fa-stopwatch"></i> 上班';
+                    btnClockAction.style.background = '#3b82f6';
+                    document.getElementById('clock-time-display').textContent = "--:--";
+                } else {
+                    alert("今日已完成上下班打卡！");
                 }
 
-                // Haversine Calc
-                const getDistance = (lat1, lon1, lat2, lon2) => {
-                    const R = 6371e3;
-                    const φ1 = lat1 * Math.PI / 180;
-                    const φ2 = lat2 * Math.PI / 180;
-                    const Δφ = (lat2 - lat1) * Math.PI / 180;
-                    const Δλ = (lon2 - lon1) * Math.PI / 180;
-                    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                    return R * c;
-                };
+                renderCalendar();
+                updateSidebar();
+                return;
+            }
 
-                targetLocs.forEach(loc => {
-                    const dist = getDistance(userLat, userLng, loc.lat, loc.lng);
-                    if (dist < minDistance) minDistance = dist;
-                    if (dist <= 150) matchedLoc = loc;
-                });
+            // --- Mobile Flow (Map Required) ---
 
-                if (matchedLoc) {
-                    statusText.innerHTML = `<i class="fa-solid fa-circle-check"></i> 確認位置：${matchedLoc.label}<br><span style="font-size:0.8rem; color:#059669;">距離 ${Math.round(minDistance)} 公尺 (符合)</span>`;
-                    statusText.style.color = '#059669';
+            // 1. Check Geolocation Support
+            if (!navigator.geolocation) { alert('您的裝置不支援地理位置功能，無法使用打卡功能。'); return; }
 
-                    // Enable Confirm Button
-                    confirmBtn.disabled = false;
-                    confirmBtn.style.opacity = '1';
 
-                    // Bind Confirm Action
-                    confirmBtn.onclick = function () {
-                        appState.clockIn(appState.currentDate, appState.currentUser.id);
+            // Open Map Modal
+            const mapModal = document.getElementById('map-modal');
+            const mapFrame = document.getElementById('map-frame');
+            const statusText = document.getElementById('map-status-text');
+            const confirmBtn = document.getElementById('btn-confirm-clock');
 
-                        // UI Refresh Logic - Force Success Display
-                        const now = new Date();
-                        const timeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
+            mapModal.classList.add('active');
+            statusText.textContent = '🚀 正在獲取您的位置...';
+            statusText.style.color = '#334155';
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+            confirmBtn.onclick = null; // Reset previous listeners
+            mapFrame.src = 'about:blank'; // Reset frame
 
-                        // Force Add Segment to ensure it shows up immediately
-                        appState.addSegment(appState.currentDate, {
-                            type: 'office',
-                            start: timeStr,
-                            end: '18:00',
-                            isAllDay: false,
-                            note: `打卡: ${matchedLoc.label}`
-                        });
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
 
-                        document.getElementById('clock-status-text').textContent = "上班中";
-                        document.getElementById('clock-status-text').style.color = "#059669";
-                        document.getElementById('clock-time-display').textContent = timeStr;
-                        btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
-                        btnClockAction.style.background = '#64748b';
+                    // Show Map (OpenStreetMap)
+                    mapFrame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${userLng - 0.005},${userLat - 0.005},${userLng + 0.005},${userLat + 0.005}&layer=mapnik&marker=${userLat},${userLng}`;
 
-                        alert(`打卡成功！\n地點: ${matchedLoc.label}\n時間: ${timeStr}`);
+                    // 2. Check Distances
+                    let matchedLoc = null;
+                    let minDistance = 999999;
 
-                        mapModal.classList.remove('active');
-                        renderCalendar();
-                        updateSidebar();
+                    const u = appState.currentUser;
+                    const locs = u.locations || [];
+                    const targetLocs = locs.filter(l => l.lat && l.lng);
+
+                    if (targetLocs.length === 0) {
+                        statusText.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 您尚未設定打卡地點！<br><span style="font-size:0.8rem">請至設定頁面新增地點</span>';
+                        statusText.style.color = '#aa4a44';
+                        return;
+                    }
+
+                    // Haversine Calc
+                    const getDistance = (lat1, lon1, lat2, lon2) => {
+                        const R = 6371e3;
+                        const φ1 = lat1 * Math.PI / 180;
+                        const φ2 = lat2 * Math.PI / 180;
+                        const Δφ = (lat2 - lat1) * Math.PI / 180;
+                        const Δλ = (lon2 - lon1) * Math.PI / 180;
+                        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                        return R * c;
                     };
 
-                } else {
-                    statusText.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> 位置不符！<br><span style="font-size:0.8rem">最近打卡點距離 ${Math.round(minDistance)} 公尺 (需 < 150)</span>`;
-                    statusText.style.color = '#dc2626';
-
-                    // Disable Confirm Button explicitly
-                    confirmBtn.disabled = true;
-                    confirmBtn.style.opacity = '0.5';
-                    confirmBtn.onclick = null; // Prevent accidental clicks
-                }
-            },
-            (error) => {
-                statusText.textContent = '❌ 無法獲取位置：' + error.message;
-                statusText.style.color = '#dc2626';
-                console.error(error);
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
-    });
-}
-
-
-if (DOM.calendar.batchBtn) DOM.calendar.batchBtn.addEventListener('click', () => {
-    appState.isBatchMode = !appState.isBatchMode;
-    if (appState.isBatchMode) { DOM.calendar.batchBtn.classList.add('active'); DOM.calendar.batchStatus.textContent = "開"; appState.clearBatchSelection(); }
-    else { DOM.calendar.batchBtn.classList.remove('active'); DOM.calendar.batchStatus.textContent = "關"; appState.clearBatchSelection(); }
-    renderCalendar(); updateSidebar();
-});
-
-DOM.sidebar.addBtn.addEventListener('click', () => {
-    const isAllDay = DOM.sidebar.checkAllDay.checked;
-    const segment = { type: DOM.newFormState.type, detail: DOM.newFormState.detail, note: DOM.sidebar.noteInput.value, isAllDay: isAllDay, start: DOM.sidebar.startTime.value, end: DOM.sidebar.endTime.value };
-    if (appState.isBatchMode && appState.multiSelectedDates.size > 0) { appState.multiSelectedDates.forEach(dateKey => { appState.addSegment(dateKey, segment); }); }
-    else { appState.addSegment(appState.selectedDate, segment); }
-    updateSidebar(); renderCalendar(); DOM.sidebar.noteInput.value = '';
-});
-
-// --- Sidebar Logic ---
-DOM.sidebar.btns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        DOM.sidebar.btns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        DOM.newFormState.type = btn.dataset.status;
-        DOM.newFormState.detail = '';
-
-        // Toggle Location Inputs
-        if (DOM.sidebar.locContainer) {
-            DOM.sidebar.locContainer.style.display = (btn.dataset.status === 'trip') ? 'flex' : 'none';
-            if (btn.dataset.status !== 'trip') {
-                if (DOM.sidebar.locStart) DOM.sidebar.locStart.value = '';
-                if (DOM.sidebar.locEnd) DOM.sidebar.locEnd.value = '';
-            }
-        }
-
-        renderSubOptions();
-    });
-});
-
-// --- Helper to init Time Selects ---
-function populateTimeSelects() {
-    // Hours 00 - 23
-    const hours = [];
-    for (let i = 0; i < 24; i++) hours.push(String(i).padStart(2, '0'));
-
-    // Mins 00 - 59 (5 min intervals for better UX?) 
-    // Let's do 1 minute intervals if precise control needed, but dropdown is long.
-    // Usually 5 is standard for attendance. User didn't specify interval, just separated buttons.
-    const mins = [];
-    for (let i = 0; i < 60; i += 5) mins.push(String(i).padStart(2, '0'));
-
-    const ids = ['start-hour', 'start-min', 'end-hour', 'end-min'];
-    ids.forEach(id => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.innerHTML = '';
-
-        const arr = id.includes('hour') ? hours : mins;
-        arr.forEach(val => {
-            const opt = document.createElement('option');
-            opt.value = val;
-            opt.textContent = val;
-            el.appendChild(opt);
-        });
-    });
-
-    // Defaults
-    if (DOM.sidebar.startHour) {
-        DOM.sidebar.startHour.value = "09";
-        DOM.sidebar.startMin.value = "00";
-        DOM.sidebar.endHour.value = "18";
-        DOM.sidebar.endMin.value = "00";
-    }
-}
-
-// Call init
-populateTimeSelects();
-
-const btnAddStatus = document.getElementById('add-status-btn');
-if (btnAddStatus) {
-    btnAddStatus.onclick = () => {
-        const note = document.getElementById('status-note').value.trim();
-
-        // Construct Time Strings from Selects
-        const sH = document.getElementById('start-hour').value;
-        const sM = document.getElementById('start-min').value;
-        const eH = document.getElementById('end-hour').value;
-        const eM = document.getElementById('end-min').value;
-
-        const startT = `${sH}:${sM}`;
-        const endT = `${eH}:${eM}`;
-
-        const isAllDay = document.getElementById('all-day-check').checked;
-        const type = DOM.newFormState.type;
-
-        // Get Location if explicit input exists
-        let detail = '';
-        if (type === 'trip') {
-            const s = document.getElementById('status-loc-start').value.trim();
-            const e = document.getElementById('status-loc-end').value.trim();
-            if (s && e) detail = `${s}-${e}`;
-            else if (s) detail = s;
-            else if (e) detail = e;
-            else detail = '出差';
-        } else if (type === 'other') {
-            // Meeting Logic
-            const link = document.getElementById('status-meet-link') ? document.getElementById('status-meet-link').value.trim() : '';
-            if (link) detail = link;
-        } else {
-            detail = DOM.newFormState.detail;
-        }
-
-        const segment = { type, detail, note, isAllDay, start: startT, end: endT };
-
-        // Logic Switch: If it's Trip/Away, create APPLICATION instead
-        const isSensitive = (type === 'trip' || type === 'away');
-
-        // Check Meeting Logic
-        if (type === 'other') {
-            const link = detail;
-            const attendees = [];
-            const checks = document.querySelectorAll('.meet-attendee-check:checked');
-            checks.forEach(c => attendees.push(c.value));
-
-            if (attendees.length > 0) {
-                // Add to attendees
-                const currentUser = appState.currentUser;
-                const subject = note || '會議';
-
-                const addSegForUser = (uid) => {
-                    // We need to use dateKey logic if batch?
-                    // Assuming single date for simplicity as "Meeting" implies specific time slot usually.
-                    // But if batch mode is on? Meeting everyday? Allow it.
-                    if (appState.isBatchMode && appState.multiSelectedDates.size > 0) {
-                        appState.multiSelectedDates.forEach(dKey => {
-                            // We need to pass Date object or Key?
-                            // appState.addSegment uses Date object usually, or key?
-                            // addSegment(dateObjOrKey, seg, userId)
-                            // Let's check addSegment signature.
-                            // It usually takes (date, segment).
-                            // Let's rely on standard logic but we need to inject user ID.
-                            // appState.addSegment signature: addSegment(dateInput, segment, targetUserId = null)
-                            appState.addSegment(dKey, { ...segment, id: Date.now() + Math.random() }, uid);
-                        });
-                    } else {
-                        appState.addSegment(appState.selectedDate, { ...segment, id: Date.now() + Math.random() }, uid);
-                    }
-                };
-
-                attendees.forEach(uid => addSegForUser(uid));
-
-                // Send Email Simulation
-                const emails = [];
-                attendees.forEach(uid => {
-                    const u = appState.users.find(User => User.id === uid);
-                    if (u && u.email) emails.push(u.email);
-                });
-
-                if (emails.length > 0) {
-                    const mailSubject = `[會議通知] ${subject}`;
-                    const mailBody = `會議時間: ${appState.formatDate(appState.selectedDate)} ${startT}-${endT}\n會議連結: ${link}\n備註: ${note}\n\n請務必準時參加。`;
-                    const mailto = `mailto:${emails.join(';')}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`;
-                    window.open(mailto, '_blank');
-                } else if (confirm('已新增會議行程，但未找到與會者的 Email。是否僅儲存行程？')) {
-                    // OK
-                }
-            }
-        }
-
-        if (isSensitive) {
-            if (appState.isBatchMode && appState.multiSelectedDates.size > 0) {
-                if (confirm('您新增的是「出差/請假」行程，將會送出簽核申請。\n確定要送出 ' + appState.multiSelectedDates.size + ' 筆申請嗎？')) {
-                    appState.multiSelectedDates.forEach(dateKey => {
-                        appState.addApplication('segment', { ...segment, date: dateKey });
+                    targetLocs.forEach(loc => {
+                        const dist = getDistance(userLat, userLng, loc.lat, loc.lng);
+                        if (dist < minDistance) minDistance = dist;
+                        if (dist <= 150) matchedLoc = loc;
                     });
-                    alert('已送出簽核申請');
-                }
-            } else {
-                if (confirm('您新增的是「出差/請假」行程，將會送出簽核申請。')) {
-                    appState.addApplication('segment', { ...segment, date: appState.formatDate(appState.selectedDate) });
-                    alert('已送出簽核申請');
-                }
-            }
-        } else {
-            // Direct Add (Office/Remote/Other)
-            if (appState.isBatchMode && appState.multiSelectedDates.size > 0) {
-                appState.multiSelectedDates.forEach(dateKey => appState.addSegment(dateKey, segment));
-            } else {
-                appState.addSegment(appState.selectedDate, segment);
-            }
-        }
 
-        updateSidebar();
-        renderCalendar();
-        // Clear inputs
-        document.getElementById('status-note').value = '';
-        if (DOM.sidebar.locStart) DOM.sidebar.locStart.value = '';
-        if (DOM.sidebar.locEnd) DOM.sidebar.locEnd.value = '';
-    };
-}
+                    if (matchedLoc) {
+                        statusText.innerHTML = `<i class="fa-solid fa-circle-check"></i> 確認位置：${matchedLoc.label}<br><span style="font-size:0.8rem; color:#059669;">距離 ${Math.round(minDistance)} 公尺 (符合)</span>`;
+                        statusText.style.color = '#059669';
 
-// --- Applications Logic ---
-let currentExpenseItems = []; // Store items for current session
+                        // Enable Confirm Button
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
 
-function openApplicationsModal() {
-    DOM.apps.modal.classList.add('active');
-    currentExpenseItems = []; // Reset
-    renderTripCheckboxes();
-    renderExpenseItemsTable();
-    renderAppHistory();
-}
+                        // Bind Confirm Action
+                        confirmBtn.onclick = function () {
+                            appState.clockIn(appState.currentDate, appState.currentUser.id);
 
-function renderTripCheckboxes() {
-    const container = DOM.apps.expenseDatesContainer;
-    if (!container) return;
-    container.innerHTML = '';
+                            // UI Refresh Logic - Force Success Display
+                            const now = new Date();
+                            const timeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
 
-    // Find trips: Scan last 2 months + next 1 month
-    const start = new Date(appState.currentDate);
-    start.setMonth(start.getMonth() - 2);
+                            // Force Add Segment to ensure it shows up immediately
+                            appState.addSegment(appState.currentDate, {
+                                type: 'office',
+                                start: timeStr,
+                                end: '18:00',
+                                isAllDay: false,
+                                note: `打卡: ${matchedLoc.label}`
+                            });
 
-    let found = false;
+                            document.getElementById('clock-status-text').textContent = "上班中";
+                            document.getElementById('clock-status-text').style.color = "#059669";
+                            document.getElementById('clock-time-display').textContent = timeStr;
+                            btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
+                            btnClockAction.style.background = '#64748b';
 
-    for (let i = 0; i < 120; i++) {
-        const d = new Date(start);
-        d.setDate(d.getDate() + i);
-        const dateKey = appState.formatDate(d);
+                            alert(`打卡成功！\n地點: ${matchedLoc.label}\n時間: ${timeStr}`);
 
-        if (appState.attendanceData[dateKey] && appState.attendanceData[dateKey][appState.currentUser.id]) {
-            const segs = appState.attendanceData[dateKey][appState.currentUser.id];
-            const tripSeg = segs.find(s => s.type === 'trip');
-            if (tripSeg) {
-                found = true;
-                const div = document.createElement('div');
-                div.className = 'check-group';
-                div.style.marginBottom = '4px';
+                            mapModal.classList.remove('active');
+                            renderCalendar();
+                            updateSidebar();
+                        };
 
-                const chk = document.createElement('input');
-                chk.type = 'checkbox';
-                chk.value = dateKey;
-                chk.dataset.note = tripSeg.note || ''; // Store note for auto-fill
-                chk.id = `chk_exp_${dateKey}`;
+                    } else {
+                        statusText.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> 位置不符！<br><span style="font-size:0.8rem">最近打卡點距離 ${Math.round(minDistance)} 公尺 (需 < 150)</span>`;
+                        statusText.style.color = '#dc2626';
 
-                chk.addEventListener('change', () => {
-                    updateExpenseUI();
-                });
-
-                const lbl = document.createElement('label');
-                lbl.htmlFor = chk.id;
-                lbl.style.marginLeft = '8px';
-                lbl.textContent = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} (${tripSeg.detail || '出差'})`;
-
-                div.appendChild(chk);
-                div.appendChild(lbl);
-                container.appendChild(div);
-            }
-        }
-    }
-    if (!found) container.innerHTML = '<div style="color:#aaa; padding:10px;">查無近期出差紀錄</div>';
-
-    // Init UI
-    updateExpenseUI();
-}
-
-function updateExpenseUI() {
-    // 1. Update Date Dropdown
-    const container = DOM.apps.expenseDatesContainer;
-    const checkedBoxes = container.querySelectorAll('input[type="checkbox"]:checked');
-    const dateSelect = DOM.apps.expItemDate;
-
-    // Save current selection if still valid
-    const oldVal = dateSelect.value;
-    dateSelect.innerHTML = '';
-
-    if (checkedBoxes.length === 0) {
-        dateSelect.innerHTML = '<option value="">(先選取左側日期)</option>';
-        DOM.apps.btnAddExpItem.disabled = true;
-    } else {
-        DOM.apps.btnAddExpItem.disabled = false;
-        checkedBoxes.forEach(chk => {
-            const opt = document.createElement('option');
-            opt.value = chk.value;
-            opt.textContent = chk.value;
-            dateSelect.appendChild(opt);
+                        // Disable Confirm Button explicitly
+                        confirmBtn.disabled = true;
+                        confirmBtn.style.opacity = '0.5';
+                        confirmBtn.onclick = null; // Prevent accidental clicks
+                    }
+                },
+                (error) => {
+                    statusText.textContent = '❌ 無法獲取位置：' + error.message;
+                    statusText.style.color = '#dc2626';
+                    console.error(error);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
         });
-        if (Array.from(dateSelect.options).some(o => o.value === oldVal)) dateSelect.value = oldVal;
     }
 
-    // 2. Auto-fill Reason (Deduplicated, No Date)
-    const activeNotes = new Set();
-    checkedBoxes.forEach(chk => {
-        if (chk.dataset.note) activeNotes.add(chk.dataset.note);
+
+    if (DOM.calendar.batchBtn) DOM.calendar.batchBtn.addEventListener('click', () => {
+        appState.isBatchMode = !appState.isBatchMode;
+        if (appState.isBatchMode) { DOM.calendar.batchBtn.classList.add('active'); DOM.calendar.batchStatus.textContent = "開"; appState.clearBatchSelection(); }
+        else { DOM.calendar.batchBtn.classList.remove('active'); DOM.calendar.batchStatus.textContent = "關"; appState.clearBatchSelection(); }
+        renderCalendar(); updateSidebar();
     });
-    const reasons = Array.from(activeNotes);
 
-    if (reasons.length > 0) {
-        DOM.apps.expenseMainReason.value = reasons.join('\n');
-    } else {
-        // Only clear if empty, don't overwrite user manual input if they typed something? 
-        // Requirement says "Auto populate". Let's overwrite safely or just append.
-        // Simple: Overwrite.
-        DOM.apps.expenseMainReason.value = '';
+    DOM.sidebar.addBtn.addEventListener('click', () => {
+        const isAllDay = DOM.sidebar.checkAllDay.checked;
+        const segment = { type: DOM.newFormState.type, detail: DOM.newFormState.detail, note: DOM.sidebar.noteInput.value, isAllDay: isAllDay, start: DOM.sidebar.startTime.value, end: DOM.sidebar.endTime.value };
+        if (appState.isBatchMode && appState.multiSelectedDates.size > 0) { appState.multiSelectedDates.forEach(dateKey => { appState.addSegment(dateKey, segment); }); }
+        else { appState.addSegment(appState.selectedDate, segment); }
+        updateSidebar(); renderCalendar(); DOM.sidebar.noteInput.value = '';
+    });
+
+    // --- Sidebar Logic ---
+    DOM.sidebar.btns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            DOM.sidebar.btns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            DOM.newFormState.type = btn.dataset.status;
+            DOM.newFormState.detail = '';
+
+            // Toggle Location Inputs
+            if (DOM.sidebar.locContainer) {
+                DOM.sidebar.locContainer.style.display = (btn.dataset.status === 'trip') ? 'flex' : 'none';
+                if (btn.dataset.status !== 'trip') {
+                    if (DOM.sidebar.locStart) DOM.sidebar.locStart.value = '';
+                    if (DOM.sidebar.locEnd) DOM.sidebar.locEnd.value = '';
+                }
+            }
+
+            renderSubOptions();
+        });
+    });
+
+    // --- Helper to init Time Selects ---
+    function populateTimeSelects() {
+        // Hours 00 - 23
+        const hours = [];
+        for (let i = 0; i < 24; i++) hours.push(String(i).padStart(2, '0'));
+
+        // Mins 00 - 59 (5 min intervals for better UX?) 
+        // Let's do 1 minute intervals if precise control needed, but dropdown is long.
+        // Usually 5 is standard for attendance. User didn't specify interval, just separated buttons.
+        const mins = [];
+        for (let i = 0; i < 60; i += 5) mins.push(String(i).padStart(2, '0'));
+
+        const ids = ['start-hour', 'start-min', 'end-hour', 'end-min'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = '';
+
+            const arr = id.includes('hour') ? hours : mins;
+            arr.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                el.appendChild(opt);
+            });
+        });
+
+        // Defaults
+        if (DOM.sidebar.startHour) {
+            DOM.sidebar.startHour.value = "09";
+            DOM.sidebar.startMin.value = "00";
+            DOM.sidebar.endHour.value = "18";
+            DOM.sidebar.endMin.value = "00";
+        }
     }
-}
 
-function renderExpenseItemsTable() {
-    const tbody = DOM.apps.expItemsTbody;
-    tbody.innerHTML = '';
-    let total = 0;
+    // Call init
+    populateTimeSelects();
 
-    currentExpenseItems.forEach((item, index) => {
-        const tr = document.createElement('tr');
-        const catMap = { traffic: '交通費', accommodation: '住宿費', meal: '膳雜費', other: '其他' };
-        const voucherType = item.voucherType || '';
-        const catDisplay = voucherType ? `${catMap[item.cat]} <br/><small style='color:#64748b;'>(${voucherType})</small>` : catMap[item.cat];
+    const btnAddStatus = document.getElementById('add-status-btn');
+    if (btnAddStatus) {
+        btnAddStatus.onclick = () => {
+            const note = document.getElementById('status-note').value.trim();
 
-        tr.innerHTML = `
+            // Construct Time Strings from Selects
+            const sH = document.getElementById('start-hour').value;
+            const sM = document.getElementById('start-min').value;
+            const eH = document.getElementById('end-hour').value;
+            const eM = document.getElementById('end-min').value;
+
+            const startT = `${sH}:${sM}`;
+            const endT = `${eH}:${eM}`;
+
+            const isAllDay = document.getElementById('all-day-check').checked;
+            const type = DOM.newFormState.type;
+
+            // Get Location if explicit input exists
+            let detail = '';
+            if (type === 'trip') {
+                const s = document.getElementById('status-loc-start').value.trim();
+                const e = document.getElementById('status-loc-end').value.trim();
+                if (s && e) detail = `${s}-${e}`;
+                else if (s) detail = s;
+                else if (e) detail = e;
+                else detail = '出差';
+            } else if (type === 'other') {
+                // Meeting Logic
+                const link = document.getElementById('status-meet-link') ? document.getElementById('status-meet-link').value.trim() : '';
+                if (link) detail = link;
+            } else {
+                detail = DOM.newFormState.detail;
+            }
+
+            const segment = { type, detail, note, isAllDay, start: startT, end: endT };
+
+            // Logic Switch: If it's Trip/Away, create APPLICATION instead
+            const isSensitive = (type === 'trip' || type === 'away');
+
+            // Check Meeting Logic
+            if (type === 'other') {
+                const link = detail;
+                const attendees = [];
+                const checks = document.querySelectorAll('.meet-attendee-check:checked');
+                checks.forEach(c => attendees.push(c.value));
+
+                if (attendees.length > 0) {
+                    // Add to attendees
+                    const currentUser = appState.currentUser;
+                    const subject = note || '會議';
+
+                    const addSegForUser = (uid) => {
+                        // We need to use dateKey logic if batch?
+                        // Assuming single date for simplicity as "Meeting" implies specific time slot usually.
+                        // But if batch mode is on? Meeting everyday? Allow it.
+                        if (appState.isBatchMode && appState.multiSelectedDates.size > 0) {
+                            appState.multiSelectedDates.forEach(dKey => {
+                                // We need to pass Date object or Key?
+                                // appState.addSegment uses Date object usually, or key?
+                                // addSegment(dateObjOrKey, seg, userId)
+                                // Let's check addSegment signature.
+                                // It usually takes (date, segment).
+                                // Let's rely on standard logic but we need to inject user ID.
+                                // appState.addSegment signature: addSegment(dateInput, segment, targetUserId = null)
+                                appState.addSegment(dKey, { ...segment, id: Date.now() + Math.random() }, uid);
+                            });
+                        } else {
+                            appState.addSegment(appState.selectedDate, { ...segment, id: Date.now() + Math.random() }, uid);
+                        }
+                    };
+
+                    attendees.forEach(uid => addSegForUser(uid));
+
+                    // Send Email Simulation
+                    const emails = [];
+                    attendees.forEach(uid => {
+                        const u = appState.users.find(User => User.id === uid);
+                        if (u && u.email) emails.push(u.email);
+                    });
+
+                    if (emails.length > 0) {
+                        const mailSubject = `[會議通知] ${subject}`;
+                        const mailBody = `會議時間: ${appState.formatDate(appState.selectedDate)} ${startT}-${endT}\n會議連結: ${link}\n備註: ${note}\n\n請務必準時參加。`;
+                        const mailto = `mailto:${emails.join(';')}?subject=${encodeURIComponent(mailSubject)}&body=${encodeURIComponent(mailBody)}`;
+                        window.open(mailto, '_blank');
+                    } else if (confirm('已新增會議行程，但未找到與會者的 Email。是否僅儲存行程？')) {
+                        // OK
+                    }
+                }
+            }
+
+            if (isSensitive) {
+                if (appState.isBatchMode && appState.multiSelectedDates.size > 0) {
+                    if (confirm('您新增的是「出差/請假」行程，將會送出簽核申請。\n確定要送出 ' + appState.multiSelectedDates.size + ' 筆申請嗎？')) {
+                        appState.multiSelectedDates.forEach(dateKey => {
+                            appState.addApplication('segment', { ...segment, date: dateKey });
+                        });
+                        alert('已送出簽核申請');
+                    }
+                } else {
+                    if (confirm('您新增的是「出差/請假」行程，將會送出簽核申請。')) {
+                        appState.addApplication('segment', { ...segment, date: appState.formatDate(appState.selectedDate) });
+                        alert('已送出簽核申請');
+                    }
+                }
+            } else {
+                // Direct Add (Office/Remote/Other)
+                if (appState.isBatchMode && appState.multiSelectedDates.size > 0) {
+                    appState.multiSelectedDates.forEach(dateKey => appState.addSegment(dateKey, segment));
+                } else {
+                    appState.addSegment(appState.selectedDate, segment);
+                }
+            }
+
+            updateSidebar();
+            renderCalendar();
+            // Clear inputs
+            document.getElementById('status-note').value = '';
+            if (DOM.sidebar.locStart) DOM.sidebar.locStart.value = '';
+            if (DOM.sidebar.locEnd) DOM.sidebar.locEnd.value = '';
+        };
+    }
+
+    // --- Applications Logic ---
+    let currentExpenseItems = []; // Store items for current session
+
+    function openApplicationsModal() {
+        DOM.apps.modal.classList.add('active');
+        currentExpenseItems = []; // Reset
+        renderTripCheckboxes();
+        renderExpenseItemsTable();
+        renderAppHistory();
+    }
+
+    function renderTripCheckboxes() {
+        const container = DOM.apps.expenseDatesContainer;
+        if (!container) return;
+        container.innerHTML = '';
+
+        // Find trips: Scan last 2 months + next 1 month
+        const start = new Date(appState.currentDate);
+        start.setMonth(start.getMonth() - 2);
+
+        let found = false;
+
+        for (let i = 0; i < 120; i++) {
+            const d = new Date(start);
+            d.setDate(d.getDate() + i);
+            const dateKey = appState.formatDate(d);
+
+            if (appState.attendanceData[dateKey] && appState.attendanceData[dateKey][appState.currentUser.id]) {
+                const segs = appState.attendanceData[dateKey][appState.currentUser.id];
+                const tripSeg = segs.find(s => s.type === 'trip');
+                if (tripSeg) {
+                    found = true;
+                    const div = document.createElement('div');
+                    div.className = 'check-group';
+                    div.style.marginBottom = '4px';
+
+                    const chk = document.createElement('input');
+                    chk.type = 'checkbox';
+                    chk.value = dateKey;
+                    chk.dataset.note = tripSeg.note || ''; // Store note for auto-fill
+                    chk.id = `chk_exp_${dateKey}`;
+
+                    chk.addEventListener('change', () => {
+                        updateExpenseUI();
+                    });
+
+                    const lbl = document.createElement('label');
+                    lbl.htmlFor = chk.id;
+                    lbl.style.marginLeft = '8px';
+                    lbl.textContent = `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()} (${tripSeg.detail || '出差'})`;
+
+                    div.appendChild(chk);
+                    div.appendChild(lbl);
+                    container.appendChild(div);
+                }
+            }
+        }
+        if (!found) container.innerHTML = '<div style="color:#aaa; padding:10px;">查無近期出差紀錄</div>';
+
+        // Init UI
+        updateExpenseUI();
+    }
+
+    function updateExpenseUI() {
+        // 1. Update Date Dropdown
+        const container = DOM.apps.expenseDatesContainer;
+        const checkedBoxes = container.querySelectorAll('input[type="checkbox"]:checked');
+        const dateSelect = DOM.apps.expItemDate;
+
+        // Save current selection if still valid
+        const oldVal = dateSelect.value;
+        dateSelect.innerHTML = '';
+
+        if (checkedBoxes.length === 0) {
+            dateSelect.innerHTML = '<option value="">(先選取左側日期)</option>';
+            DOM.apps.btnAddExpItem.disabled = true;
+        } else {
+            DOM.apps.btnAddExpItem.disabled = false;
+            checkedBoxes.forEach(chk => {
+                const opt = document.createElement('option');
+                opt.value = chk.value;
+                opt.textContent = chk.value;
+                dateSelect.appendChild(opt);
+            });
+            if (Array.from(dateSelect.options).some(o => o.value === oldVal)) dateSelect.value = oldVal;
+        }
+
+        // 2. Auto-fill Reason (Deduplicated, No Date)
+        const activeNotes = new Set();
+        checkedBoxes.forEach(chk => {
+            if (chk.dataset.note) activeNotes.add(chk.dataset.note);
+        });
+        const reasons = Array.from(activeNotes);
+
+        if (reasons.length > 0) {
+            DOM.apps.expenseMainReason.value = reasons.join('\n');
+        } else {
+            // Only clear if empty, don't overwrite user manual input if they typed something? 
+            // Requirement says "Auto populate". Let's overwrite safely or just append.
+            // Simple: Overwrite.
+            DOM.apps.expenseMainReason.value = '';
+        }
+    }
+
+    function renderExpenseItemsTable() {
+        const tbody = DOM.apps.expItemsTbody;
+        tbody.innerHTML = '';
+        let total = 0;
+
+        currentExpenseItems.forEach((item, index) => {
+            const tr = document.createElement('tr');
+            const catMap = { traffic: '交通費', accommodation: '住宿費', meal: '膳雜費', other: '其他' };
+            const voucherType = item.voucherType || '';
+            const catDisplay = voucherType ? `${catMap[item.cat]} <br/><small style='color:#64748b;'>(${voucherType})</small>` : catMap[item.cat];
+
+            tr.innerHTML = `
                 <td>${item.date}</td>
                 <td>${catDisplay}</td>
                 <td>${item.desc}</td>
                 <td>$${item.amount}</td>
                 <td><button onclick="removeExpItem(${index})" style="color:#ef4444; background:none; border:none; cursor:pointer;"><i class="fa-solid fa-trash"></i></button></td>
             `;
-        tbody.appendChild(tr);
-        total += parseInt(item.amount || 0);
-    });
+            tbody.appendChild(tr);
+            total += parseInt(item.amount || 0);
+        });
 
-    DOM.apps.expTotalDisplay.textContent = `$${total.toLocaleString()}`;
-}
+        DOM.apps.expTotalDisplay.textContent = `$${total.toLocaleString()}`;
+    }
 
-// Global expose
-window.removeExpItem = function (index) {
-    currentExpenseItems.splice(index, 1);
-    renderExpenseItemsTable();
-};
+    // Global expose
+    window.removeExpItem = function (index) {
+        currentExpenseItems.splice(index, 1);
+        renderExpenseItemsTable();
+    };
 
-function renderAppHistory() {
-    const tbody = DOM.apps.historyTbody;
-    if (!tbody) return;
-    tbody.innerHTML = '';
-    const apps = [...appState.applications].sort((a, b) => b.timestamp - a.timestamp);
-    const currentUser = appState.currentUser;
+    function renderAppHistory() {
+        const tbody = DOM.apps.historyTbody;
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        const apps = [...appState.applications].sort((a, b) => b.timestamp - a.timestamp);
+        const currentUser = appState.currentUser;
 
-    // Visibility Filter Logic
-    const isSuperAdmin = currentUser.permissions.superAdmin;
+        // Visibility Filter Logic
+        const isSuperAdmin = currentUser.permissions.superAdmin;
 
-    apps.forEach(app => {
-        const applicant = appState.users.find(u => u.id === app.userId);
-        const applicantName = applicant ? (applicant.chiname || applicant.name) : 'Unknown';
-        const isMyOwn = (app.userId === currentUser.id);
+        apps.forEach(app => {
+            const applicant = appState.users.find(u => u.id === app.userId);
+            const applicantName = applicant ? (applicant.chiname || applicant.name) : 'Unknown';
+            const isMyOwn = (app.userId === currentUser.id);
 
-        // Visibility Rules:
-        // 1. Super Admin -> See All
-        // 2. My Own -> See All
-        // 3. I am the Direct Manager -> See
-        // 4. Same Department & I am Manager -> See (Legacy/Fallback)
+            // Visibility Rules:
+            // 1. Super Admin -> See All
+            // 2. My Own -> See All
+            // 3. I am the Direct Manager -> See
+            // 4. Same Department & I am Manager -> See (Legacy/Fallback)
 
-        let isVisible = false;
-        let canApprove = false;
+            let isVisible = false;
+            let canApprove = false;
 
-        if (isSuperAdmin || isMyOwn) {
-            isVisible = true;
-        }
+            if (isSuperAdmin || isMyOwn) {
+                isVisible = true;
+            }
 
-        const isDirectManager = (applicant && applicant.managerId === currentUser.id);
+            const isDirectManager = (applicant && applicant.managerId === currentUser.id);
 
-        if (currentUser.permissions.approve) {
-            // 1. Direct Assignment
-            if (isDirectManager) {
+            if (currentUser.permissions.approve) {
+                // 1. Direct Assignment
+                if (isDirectManager) {
+                    isVisible = true;
+                    canApprove = true;
+                }
+
+                // 2. Department Logic (Fallback)
+                if (!isMyOwn) {
+                    const appTitle = applicant ? (applicant.title || '') : '';
+                    const myTitle = currentUser.title || '';
+
+                    const getDept = (t) => {
+                        if (t.includes('工程')) return '工程';
+                        if (t.includes('業務')) return '業務';
+                        if (t.includes('客服')) return '客服';
+                        if (t.includes('人事')) return '人事';
+                        return '其他';
+                    };
+                    const appDept = getDept(appTitle);
+                    const myDept = getDept(myTitle);
+
+                    // Logic: I am Manager of SAME dept AND they are NOT Manager
+                    const isMyDeptMatch = (appDept !== '其他') && (appDept === myDept) && (myTitle.includes('主管'));
+
+                    if (isMyDeptMatch) {
+                        isVisible = true;
+                        canApprove = true;
+                    }
+
+                    // 'bb' Override
+                    if (currentUser.username.toLowerCase() === 'bb' || currentUser.username === 'Brian') {
+                        isVisible = true;
+                        canApprove = true;
+                    }
+                }
+            }
+
+            // Super Admin Approves All
+            if (isSuperAdmin) {
                 isVisible = true;
                 canApprove = true;
             }
 
-            // 2. Department Logic (Fallback)
-            if (!isMyOwn) {
-                const appTitle = applicant ? (applicant.title || '') : '';
-                const myTitle = currentUser.title || '';
+            if (!isVisible) return; // Skip
 
-                const getDept = (t) => {
-                    if (t.includes('工程')) return '工程';
-                    if (t.includes('業務')) return '業務';
-                    if (t.includes('客服')) return '客服';
-                    if (t.includes('人事')) return '人事';
-                    return '其他';
-                };
-                const appDept = getDept(appTitle);
-                const myDept = getDept(myTitle);
+            const tr = document.createElement('tr');
+            let content = '';
 
-                // Logic: I am Manager of SAME dept AND they are NOT Manager
-                const isMyDeptMatch = (appDept !== '其他') && (appDept === myDept) && (myTitle.includes('主管'));
-
-                if (isMyDeptMatch) {
-                    isVisible = true;
-                    canApprove = true;
-                }
-
-                // 'bb' Override
-                if (currentUser.username.toLowerCase() === 'bb' || currentUser.username === 'Brian') {
-                    isVisible = true;
-                    canApprove = true;
-                }
-            }
-        }
-
-        // Super Admin Approves All
-        if (isSuperAdmin) {
-            isVisible = true;
-            canApprove = true;
-        }
-
-        if (!isVisible) return; // Skip
-
-        const tr = document.createElement('tr');
-        let content = '';
-
-        if (app.type === 'correction') {
-            content = `<div><strong>補卡日期:</strong> ${app.data.date}</div><div>上班: ${app.data.in || '--'} / 下班: ${app.data.out || '--'}</div><div style="color:#666; font-size:0.85rem;">理由: ${app.data.reason}</div>`;
-        } else if (app.type === 'segment') {
-            const mapType = { trip: '出差', away: '請假' };
-            const label = mapType[app.data.type] || '行程';
-            const time = app.data.isAllDay ? '全天' : `${app.data.start}-${app.data.end}`;
-            content = `<div><strong>${label}申請:</strong> ${app.data.date}</div>
+            if (app.type === 'correction') {
+                content = `<div><strong>補卡日期:</strong> ${app.data.date}</div><div>上班: ${app.data.in || '--'} / 下班: ${app.data.out || '--'}</div><div style="color:#666; font-size:0.85rem;">理由: ${app.data.reason}</div>`;
+            } else if (app.type === 'segment') {
+                const mapType = { trip: '出差', away: '請假' };
+                const label = mapType[app.data.type] || '行程';
+                const time = app.data.isAllDay ? '全天' : `${app.data.start}-${app.data.end}`;
+                content = `<div><strong>${label}申請:</strong> ${app.data.date}</div>
                            <div>時間: ${time}</div>
                            <div style="color:#666; font-size:0.85rem;">${app.data.note || ''}</div>`;
-        } else {
-            // Expense
-            const total = app.data.totalAmount || app.data.amount;
-            const reason = app.data.reason || app.data.desc;
-            const dates = app.data.dates ? app.data.dates.join(', ') : app.data.date;
+            } else {
+                // Expense
+                const total = app.data.totalAmount || app.data.amount;
+                const reason = app.data.reason || app.data.desc;
+                const dates = app.data.dates ? app.data.dates.join(', ') : app.data.date;
 
-            content = `<div><strong>日期:</strong> ${dates}</div>
+                content = `<div><strong>日期:</strong> ${dates}</div>
                            <div style="font-weight:bold; color:#2563eb;">總額: $${total}</div>
                            <div style="color:#666; font-size:0.85rem;">${reason}</div>`;
-            if (app.data.items && app.data.items.length > 0) {
-                content += `<div style="font-size:0.8rem; color:#64748b; margin-top:4px;">包含 ${app.data.items.length} 筆明細</div>`;
+                if (app.data.items && app.data.items.length > 0) {
+                    content += `<div style="font-size:0.8rem; color:#64748b; margin-top:4px;">包含 ${app.data.items.length} 筆明細</div>`;
+                }
             }
-        }
 
-        let statusBadge = '';
-        let actionButtons = '';
+            let statusBadge = '';
+            let actionButtons = '';
 
-        if (app.status === 'pending') {
-            statusBadge = `<span class="status-badge pending">🔴 待簽核</span>`;
-            if (canApprove) {
-                actionButtons = `
+            if (app.status === 'pending') {
+                statusBadge = `<span class="status-badge pending">🔴 待簽核</span>`;
+                if (canApprove) {
+                    actionButtons = `
                         <div style="display:flex; gap:5px;">
                             <button class="btn-primary" style="padding:2px 8px; font-size:0.8rem; background:#16a34a;" onclick="approveApp('${app.id}')">核准</button>
                             <button class="btn-secondary" style="padding:2px 8px; font-size:0.8rem; background:#fee2e2; color:#991b1b; border:none;" onclick="rejectApp('${app.id}')">駁回</button>
                         </div>
                     `;
-            } else {
-                actionButtons = `<span style="color:#f59e0b; font-size:0.85rem;">等待審核</span>`;
+                } else {
+                    actionButtons = `<span style="color:#f59e0b; font-size:0.85rem;">等待審核</span>`;
+                }
+            } else if (app.status === 'approved') {
+                statusBadge = `<span class="status-badge approved">🟢 已核准</span>`;
+                actionButtons = `<span style="color:#aaa; font-size:0.8rem;">已結案</span>`;
+            } else if (app.status === 'rejected') {
+                statusBadge = `<span class="status-badge rejected">🔴 已駁回</span>`;
+                actionButtons = `<span style="color:#aaa; font-size:0.8rem;">已結案</span>`;
             }
-        } else if (app.status === 'approved') {
-            statusBadge = `<span class="status-badge approved">🟢 已核准</span>`;
-            actionButtons = `<span style="color:#aaa; font-size:0.8rem;">已結案</span>`;
-        } else if (app.status === 'rejected') {
-            statusBadge = `<span class="status-badge rejected">🔴 已駁回</span>`;
-            actionButtons = `<span style="color:#aaa; font-size:0.8rem;">已結案</span>`;
-        }
 
-        tr.innerHTML = `<td>${statusBadge}</td><td><div style="font-weight:600">${applicantName}</div><div style="font-size:0.8rem; color:#94a3b8;">${new Date(app.timestamp).toLocaleDateString()}</div></td><td>${content}</td><td>${actionButtons}</td>`;
-        tbody.appendChild(tr);
-    });
-}
-
-// Global expose
-window.approveApp = function (id) {
-    if (confirm('確定核准此申請嗎？(補打卡將自動修正考勤紀錄)')) {
-        appState.updateApplicationStatus(id, 'approved');
-        renderAppHistory();
-        renderStats(); renderCalendar(); alert('✅ 已核准並生效');
+            tr.innerHTML = `<td>${statusBadge}</td><td><div style="font-weight:600">${applicantName}</div><div style="font-size:0.8rem; color:#94a3b8;">${new Date(app.timestamp).toLocaleDateString()}</div></td><td>${content}</td><td>${actionButtons}</td>`;
+            tbody.appendChild(tr);
+        });
     }
-};
-window.rejectApp = function (id) {
-    if (confirm('確定駁回嗎？')) {
-        appState.updateApplicationStatus(id, 'rejected');
-        renderAppHistory();
-    }
-};
-window.openApplicationsModal = openApplicationsModal;
 
-// Listeners
-if (DOM.apps.btn) DOM.apps.btn.onclick = function () { window.openApplicationsModal(); };
-if (DOM.apps.closeBtn) DOM.apps.closeBtn.addEventListener('click', () => DOM.apps.modal.classList.remove('active'));
-
-if (DOM.apps.tabBtns) {
-    DOM.apps.tabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            DOM.apps.tabBtns.forEach(b => b.classList.remove('active'));
-            DOM.apps.tabContents.forEach(c => c.classList.remove('active'));
-            btn.classList.add('active');
-            const tid = btn.getAttribute('data-tab');
-            const t = document.getElementById(tid);
-            if (t) t.classList.add('active');
-        });
-    });
-}
-
-// Correction Submit
-if (DOM.apps.btnSubmitCorrect) {
-    DOM.apps.btnSubmitCorrect.addEventListener('click', () => {
-        const date = DOM.apps.correctDate.value;
-        const tIn = DOM.apps.correctIn.value;
-        const tOut = DOM.apps.correctOut.value;
-        const reason = DOM.apps.correctReason.value;
-        if (!date || (!tIn && !tOut)) { alert('請選擇日期並至少填寫一個時間'); return; }
-        appState.addApplication('correction', { date, in: tIn, out: tOut, reason });
-        alert('✅ 補打卡申請已送出！');
-        DOM.apps.correctReason.value = '';
-        renderAppHistory();
-        DOM.apps.tabBtns[2].click();
-    });
-}
-
-// Expense Item Add
-if (DOM.apps.btnAddExpItem) {
-    DOM.apps.btnAddExpItem.addEventListener('click', () => {
-        const dateSelect = DOM.apps.expItemDate;
-        const date = dateSelect.value;
-        if (!date || date.includes('請先選')) { alert('請先選擇日期'); return; }
-        const cat = DOM.apps.expItemCat.value;
-        const desc = DOM.apps.expItemDesc.value.trim();
-        const amount = DOM.apps.expItemAmount.value.trim();
-        const voucherType = document.getElementById('exp-item-type').value;
-
-        if (!desc) { alert('請填寫說明'); return; }
-        if (!amount || parseInt(amount) <= 0) { alert('請填寫有效金額'); return; }
-
-        currentExpenseItems.push({
-            date, cat, desc, amount, voucherType,
-            id: Date.now() + Math.random() // Temp ID
-        });
-
-        // Reset Item Inputs
-        DOM.apps.expItemDesc.value = '';
-        DOM.apps.expItemAmount.value = '';
-        document.getElementById('exp-item-type').value = '購票證明';
-        renderExpenseItemsTable();
-    });
-}
-
-// Expense Submit (Updated)
-if (DOM.apps.btnSubmitExpense) {
-    DOM.apps.btnSubmitExpense.addEventListener('click', () => {
-        const container = DOM.apps.expenseDatesContainer;
-        const checkedBoxes = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(c => c.value);
-        const reason = DOM.apps.expenseMainReason.value;
-
-        if (checkedBoxes.length === 0) { alert('請至少勾選一個出差日期'); return; }
-        if (currentExpenseItems.length === 0) { alert('請至少新增一筆費用明細'); return; }
-
-        const total = currentExpenseItems.reduce((sum, item) => sum + parseInt(item.amount || 0), 0);
-
-        appState.addApplication('expense', {
-            dates: checkedBoxes,
-            reason: reason,
-            items: currentExpenseItems,
-            totalAmount: total
-        });
-
-        alert('✅ 出差費申請已送出！');
-        currentExpenseItems = []; // clear
-        renderExpenseItemsTable();
-        DOM.apps.expenseMainReason.value = '';
-        // Reset logic or UI?
-        renderTripCheckboxes(); // re-init
-        renderAppHistory();
-        DOM.apps.tabBtns[2].click();
-    });
-}
-
-// PDF Generation
-const btnPdf = document.getElementById('btn-generate-pdf');
-if (btnPdf) {
-    btnPdf.addEventListener('click', () => {
-        if (currentExpenseItems.length === 0) { alert('請先新增費用明細才能產生報表'); return; }
-        generateExpensePDF(currentExpenseItems, DOM.apps.expenseMainReason.value);
-    });
-}
-
-function generateExpensePDF(items, mainReason) {
-    // 1. Data Prep
-    const user = appState.currentUser;
-    const sortedItems = [...items].sort((a, b) => new Date(a.date) - new Date(b.date));
-    const startDate = sortedItems[0].date;
-    const endDate = sortedItems[sortedItems.length - 1].date;
-
-    let totalTraffic = 0, totalAccom = 0, totalMeal = 0, totalOther = 0;
-    let grandTotal = 0;
-
-    // 2. Build Rows
-    let rowsHtml = '';
-    sortedItems.forEach(item => {
-        const amt = parseInt(item.amount);
-        grandTotal += amt;
-
-        let traffic = '', accom = '', meal = '';
-        if (item.cat === 'traffic') { traffic = amt; totalTraffic += amt; }
-        else if (item.cat === 'accommodation') { accom = amt; totalAccom += amt; }
-        else { meal = amt; totalMeal += amt; }
-
-        // Get Calendar Data for this date
-        // Parse YYYY-MM-DD manually to avoid timezone shifts
-        const [y, m, d] = item.date.split('-');
-        const dateKey = `${parseInt(y)}-${parseInt(m)}-${parseInt(d)}`;
-
-        let location = '-';
-        let workSummary = '-';
-
-        if (appState.attendanceData[dateKey] && appState.attendanceData[dateKey][user.id]) {
-            const segs = appState.attendanceData[dateKey][user.id];
-            const tripSegs = segs.filter(s => s.type === 'trip');
-
-            // Find any segment that has location detail
-            const locSeg = tripSegs.find(s => s.detail);
-            if (locSeg) location = locSeg.detail;
-
-            // Find any segment that has note
-            // Deduplicate notes if multiple segments
-            const notes = [...new Set(tripSegs.map(s => s.note).filter(n => n))];
-            if (notes.length > 0) workSummary = notes.join('、');
+    // Global expose
+    window.approveApp = function (id) {
+        if (confirm('確定核准此申請嗎？(補打卡將自動修正考勤紀錄)')) {
+            appState.updateApplicationStatus(id, 'approved');
+            renderAppHistory();
+            renderStats(); renderCalendar(); alert('✅ 已核准並生效');
         }
+    };
+    window.rejectApp = function (id) {
+        if (confirm('確定駁回嗎？')) {
+            appState.updateApplicationStatus(id, 'rejected');
+            renderAppHistory();
+        }
+    };
+    window.openApplicationsModal = openApplicationsModal;
 
-        rowsHtml += `
+    // Listeners
+    if (DOM.apps.btn) DOM.apps.btn.onclick = function () { window.openApplicationsModal(); };
+    if (DOM.apps.closeBtn) DOM.apps.closeBtn.addEventListener('click', () => DOM.apps.modal.classList.remove('active'));
+
+    if (DOM.apps.tabBtns) {
+        DOM.apps.tabBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                DOM.apps.tabBtns.forEach(b => b.classList.remove('active'));
+                DOM.apps.tabContents.forEach(c => c.classList.remove('active'));
+                btn.classList.add('active');
+                const tid = btn.getAttribute('data-tab');
+                const t = document.getElementById(tid);
+                if (t) t.classList.add('active');
+            });
+        });
+    }
+
+    // Correction Submit
+    if (DOM.apps.btnSubmitCorrect) {
+        DOM.apps.btnSubmitCorrect.addEventListener('click', () => {
+            const date = DOM.apps.correctDate.value;
+            const tIn = DOM.apps.correctIn.value;
+            const tOut = DOM.apps.correctOut.value;
+            const reason = DOM.apps.correctReason.value;
+            if (!date || (!tIn && !tOut)) { alert('請選擇日期並至少填寫一個時間'); return; }
+            appState.addApplication('correction', { date, in: tIn, out: tOut, reason });
+            alert('✅ 補打卡申請已送出！');
+            DOM.apps.correctReason.value = '';
+            renderAppHistory();
+            DOM.apps.tabBtns[2].click();
+        });
+    }
+
+    // Expense Item Add
+    if (DOM.apps.btnAddExpItem) {
+        DOM.apps.btnAddExpItem.addEventListener('click', () => {
+            const dateSelect = DOM.apps.expItemDate;
+            const date = dateSelect.value;
+            if (!date || date.includes('請先選')) { alert('請先選擇日期'); return; }
+            const cat = DOM.apps.expItemCat.value;
+            const desc = DOM.apps.expItemDesc.value.trim();
+            const amount = DOM.apps.expItemAmount.value.trim();
+            const voucherType = document.getElementById('exp-item-type').value;
+
+            if (!desc) { alert('請填寫說明'); return; }
+            if (!amount || parseInt(amount) <= 0) { alert('請填寫有效金額'); return; }
+
+            currentExpenseItems.push({
+                date, cat, desc, amount, voucherType,
+                id: Date.now() + Math.random() // Temp ID
+            });
+
+            // Reset Item Inputs
+            DOM.apps.expItemDesc.value = '';
+            DOM.apps.expItemAmount.value = '';
+            document.getElementById('exp-item-type').value = '購票證明';
+            renderExpenseItemsTable();
+        });
+    }
+
+    // Expense Submit (Updated)
+    if (DOM.apps.btnSubmitExpense) {
+        DOM.apps.btnSubmitExpense.addEventListener('click', () => {
+            const container = DOM.apps.expenseDatesContainer;
+            const checkedBoxes = Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map(c => c.value);
+            const reason = DOM.apps.expenseMainReason.value;
+
+            if (checkedBoxes.length === 0) { alert('請至少勾選一個出差日期'); return; }
+            if (currentExpenseItems.length === 0) { alert('請至少新增一筆費用明細'); return; }
+
+            const total = currentExpenseItems.reduce((sum, item) => sum + parseInt(item.amount || 0), 0);
+
+            appState.addApplication('expense', {
+                dates: checkedBoxes,
+                reason: reason,
+                items: currentExpenseItems,
+                totalAmount: total
+            });
+
+            alert('✅ 出差費申請已送出！');
+            currentExpenseItems = []; // clear
+            renderExpenseItemsTable();
+            DOM.apps.expenseMainReason.value = '';
+            // Reset logic or UI?
+            renderTripCheckboxes(); // re-init
+            renderAppHistory();
+            DOM.apps.tabBtns[2].click();
+        });
+    }
+
+    // PDF Generation
+    const btnPdf = document.getElementById('btn-generate-pdf');
+    if (btnPdf) {
+        btnPdf.addEventListener('click', () => {
+            if (currentExpenseItems.length === 0) { alert('請先新增費用明細才能產生報表'); return; }
+            generateExpensePDF(currentExpenseItems, DOM.apps.expenseMainReason.value);
+        });
+    }
+
+    function generateExpensePDF(items, mainReason) {
+        // 1. Data Prep
+        const user = appState.currentUser;
+        const sortedItems = [...items].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const startDate = sortedItems[0].date;
+        const endDate = sortedItems[sortedItems.length - 1].date;
+
+        let totalTraffic = 0, totalAccom = 0, totalMeal = 0, totalOther = 0;
+        let grandTotal = 0;
+
+        // 2. Build Rows
+        let rowsHtml = '';
+        sortedItems.forEach(item => {
+            const amt = parseInt(item.amount);
+            grandTotal += amt;
+
+            let traffic = '', accom = '', meal = '';
+            if (item.cat === 'traffic') { traffic = amt; totalTraffic += amt; }
+            else if (item.cat === 'accommodation') { accom = amt; totalAccom += amt; }
+            else { meal = amt; totalMeal += amt; }
+
+            // Get Calendar Data for this date
+            // Parse YYYY-MM-DD manually to avoid timezone shifts
+            const [y, m, d] = item.date.split('-');
+            const dateKey = `${parseInt(y)}-${parseInt(m)}-${parseInt(d)}`;
+
+            let location = '-';
+            let workSummary = '-';
+
+            if (appState.attendanceData[dateKey] && appState.attendanceData[dateKey][user.id]) {
+                const segs = appState.attendanceData[dateKey][user.id];
+                const tripSegs = segs.filter(s => s.type === 'trip');
+
+                // Find any segment that has location detail
+                const locSeg = tripSegs.find(s => s.detail);
+                if (locSeg) location = locSeg.detail;
+
+                // Find any segment that has note
+                // Deduplicate notes if multiple segments
+                const notes = [...new Set(tripSegs.map(s => s.note).filter(n => n))];
+                if (notes.length > 0) workSummary = notes.join('、');
+            }
+
+            rowsHtml += `
                 <tr style="height: 30px;">
                     <td style="border:1px solid #000; text-align:center;">${item.date}</td>
                     <td style="border:1px solid #000; text-align:center;">${location}</td>
@@ -2872,11 +2873,11 @@ function generateExpensePDF(items, mainReason) {
                     <td style="border:1px solid #000; text-align:left; padding:0 5px;">${item.desc}</td>
                 </tr>
             `;
-    });
+        });
 
-    // Fill empty rows to make it look full (approx 8 rows total usually)
-    for (let i = sortedItems.length; i < 8; i++) {
-        rowsHtml += `
+        // Fill empty rows to make it look full (approx 8 rows total usually)
+        for (let i = sortedItems.length; i < 8; i++) {
+            rowsHtml += `
                 <tr style="height: 30px;">
                     <td style="border:1px solid #000;">&nbsp;</td>
                     <td style="border:1px solid #000;"></td>
@@ -2889,12 +2890,12 @@ function generateExpensePDF(items, mainReason) {
                     <td style="border:1px solid #000;"></td>
                 </tr>
             `;
-    }
+        }
 
-    const moneyText = numberToChinese(grandTotal);
+        const moneyText = numberToChinese(grandTotal);
 
-    // 3. HTML Template
-    const printContent = `
+        // 3. HTML Template
+        const printContent = `
             <html>
             <head>
                 <title>出差旅費報告表</title>
@@ -2997,114 +2998,114 @@ function generateExpensePDF(items, mainReason) {
             </html>
         `;
 
-    const newWin = window.open('', '_blank');
-    newWin.document.write(printContent);
-    newWin.document.close();
-}
-
-function numberToChinese(n) {
-    if (n === 0) return "零元整";
-    if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(n)) return "";
-    let unit = "仟佰拾億仟佰拾萬仟佰拾元角分", str = "";
-    n += "00";
-    const p = n.indexOf('.');
-    if (p >= 0) n = n.substring(0, p) + n.substr(p + 1, 2);
-    unit = unit.substr(unit.length - n.length);
-    for (let i = 0; i < n.length; i++) str += '零壹貳參肆伍陸柒捌玖'.charAt(n.charAt(i)) + unit.charAt(i);
-    return str.replace(/零(仟|佰|拾|角)/g, "零").replace(/(零)+/g, "零").replace(/零(萬|億|元)/g, "$1").replace(/(億)萬|壹(拾)/g, "$1$2").replace(/^元零?|零分/g, "").replace(/元$/g, "元整");
-}
-
-if (DOM.settings.adminCheck) {
-    DOM.settings.adminCheck.addEventListener('change', (e) => {
-        appState.isAdminMode = e.target.checked;
-        if (appState.isAdminMode) { DOM.sidebar.adminSelectorDiv.classList.remove('hidden'); renderAdminSelector(); alert('已開啟管理者模式'); }
-        else { DOM.sidebar.adminSelectorDiv.classList.add('hidden'); appState.adminTargetUserId = appState.currentUser.id; }
-        updateSidebar();
-    });
-}
-
-if (DOM.sidebar.targetUserSelect) DOM.sidebar.targetUserSelect.addEventListener('change', (e) => { appState.adminTargetUserId = e.target.value; updateSidebar(); });
-
-// Event Input Listener
-if (DOM.sidebar.eventInput) {
-    DOM.sidebar.eventInput.addEventListener('change', (e) => {
-        if (!appState.isBatchMode) {
-            appState.setEvent(appState.selectedDate, e.target.value);
-            renderCalendar();
-        }
-    });
-}
-
-// --- Perpetual Calendar & Month Nav Logic ---
-window.changeMonth = function (id, offset) {
-    const input = document.getElementById(id);
-    if (!input) return;
-
-    let date;
-    if (offset === 0) {
-        date = new Date(); // Reset to today
-    } else {
-        // Parse current value or use appState current
-        if (input.value) {
-            date = new Date(input.value + "-01");
-        } else {
-            date = new Date();
-        }
-        date.setMonth(date.getMonth() + offset);
+        const newWin = window.open('', '_blank');
+        newWin.document.write(printContent);
+        newWin.document.close();
     }
 
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    input.value = `${y}-${m}`;
-};
+    function numberToChinese(n) {
+        if (n === 0) return "零元整";
+        if (!/^(0|[1-9]\d*)(\.\d+)?$/.test(n)) return "";
+        let unit = "仟佰拾億仟佰拾萬仟佰拾元角分", str = "";
+        n += "00";
+        const p = n.indexOf('.');
+        if (p >= 0) n = n.substring(0, p) + n.substr(p + 1, 2);
+        unit = unit.substr(unit.length - n.length);
+        for (let i = 0; i < n.length; i++) str += '零壹貳參肆伍陸柒捌玖'.charAt(n.charAt(i)) + unit.charAt(i);
+        return str.replace(/零(仟|佰|拾|角)/g, "零").replace(/(零)+/g, "零").replace(/零(萬|億|元)/g, "$1").replace(/(億)萬|壹(拾)/g, "$1$2").replace(/^元零?|零分/g, "").replace(/元$/g, "元整");
+    }
 
-// --- Login Logic (Restored) ---
-if (DOM.loginForm) {
-    DOM.loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = DOM.usernameInput.value;
-        const password = DOM.loginPasswordInput.value;
+    if (DOM.settings.adminCheck) {
+        DOM.settings.adminCheck.addEventListener('change', (e) => {
+            appState.isAdminMode = e.target.checked;
+            if (appState.isAdminMode) { DOM.sidebar.adminSelectorDiv.classList.remove('hidden'); renderAdminSelector(); alert('已開啟管理者模式'); }
+            else { DOM.sidebar.adminSelectorDiv.classList.add('hidden'); appState.adminTargetUserId = appState.currentUser.id; }
+            updateSidebar();
+        });
+    }
 
-        if (appState.login(username, password)) {
-            switchScreen('dashboard');
-            renderDashboard();
+    if (DOM.sidebar.targetUserSelect) DOM.sidebar.targetUserSelect.addEventListener('change', (e) => { appState.adminTargetUserId = e.target.value; updateSidebar(); });
+
+    // Event Input Listener
+    if (DOM.sidebar.eventInput) {
+        DOM.sidebar.eventInput.addEventListener('change', (e) => {
+            if (!appState.isBatchMode) {
+                appState.setEvent(appState.selectedDate, e.target.value);
+                renderCalendar();
+            }
+        });
+    }
+
+    // --- Perpetual Calendar & Month Nav Logic ---
+    window.changeMonth = function (id, offset) {
+        const input = document.getElementById(id);
+        if (!input) return;
+
+        let date;
+        if (offset === 0) {
+            date = new Date(); // Reset to today
         } else {
-            alert('登入失敗，請檢查帳號密碼 (預設: Alex / 123)');
-            DOM.loginForm.classList.add('shake');
-            setTimeout(() => DOM.loginForm.classList.remove('shake'), 500);
+            // Parse current value or use appState current
+            if (input.value) {
+                date = new Date(input.value + "-01");
+            } else {
+                date = new Date();
+            }
+            date.setMonth(date.getMonth() + offset);
         }
-    });
-}
 
-// Logout Logic
-if (DOM.userDisplay.logoutBtn) {
-    DOM.userDisplay.logoutBtn.addEventListener('click', () => {
-        appState.logout();
-    });
-}
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        input.value = `${y}-${m}`;
+    };
 
-// Perpetual Calendar Listeners
-if (DOM.calendar.yearSelect) {
-    DOM.calendar.yearSelect.addEventListener('change', (e) => {
-        appState.currentDate.setFullYear(parseInt(e.target.value));
-        renderCalendar();
-        updateSidebar();
-    });
-}
-if (DOM.calendar.monthSelect) {
-    DOM.calendar.monthSelect.addEventListener('change', (e) => {
-        appState.currentDate.setMonth(parseInt(e.target.value));
-        renderCalendar();
-        updateSidebar();
-    });
-}
+    // --- Login Logic (Restored) ---
+    if (DOM.loginForm) {
+        DOM.loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = DOM.usernameInput.value;
+            const password = DOM.loginPasswordInput.value;
 
-// Final Safety Check for Apps Button binding
-const safeAppBtn = document.getElementById('btn-app-header');
-if (safeAppBtn) {
-    safeAppBtn.onclick = function () { window.openApplicationsModal(); };
-    safeAppBtn.addEventListener('click', window.openApplicationsModal); // Double bind
-}
+            if (appState.login(username, password)) {
+                switchScreen('dashboard');
+                renderDashboard();
+            } else {
+                alert('登入失敗，請檢查帳號密碼 (預設: Alex / 123)');
+                DOM.loginForm.classList.add('shake');
+                setTimeout(() => DOM.loginForm.classList.remove('shake'), 500);
+            }
+        });
+    }
 
-if (appState.currentUser) { switchScreen('dashboard'); renderDashboard(); }
+    // Logout Logic
+    if (DOM.userDisplay.logoutBtn) {
+        DOM.userDisplay.logoutBtn.addEventListener('click', () => {
+            appState.logout();
+        });
+    }
+
+    // Perpetual Calendar Listeners
+    if (DOM.calendar.yearSelect) {
+        DOM.calendar.yearSelect.addEventListener('change', (e) => {
+            appState.currentDate.setFullYear(parseInt(e.target.value));
+            renderCalendar();
+            updateSidebar();
+        });
+    }
+    if (DOM.calendar.monthSelect) {
+        DOM.calendar.monthSelect.addEventListener('change', (e) => {
+            appState.currentDate.setMonth(parseInt(e.target.value));
+            renderCalendar();
+            updateSidebar();
+        });
+    }
+
+    // Final Safety Check for Apps Button binding
+    const safeAppBtn = document.getElementById('btn-app-header');
+    if (safeAppBtn) {
+        safeAppBtn.onclick = function () { window.openApplicationsModal(); };
+        safeAppBtn.addEventListener('click', window.openApplicationsModal); // Double bind
+    }
+
+    if (appState.currentUser) { switchScreen('dashboard'); renderDashboard(); }
 });
