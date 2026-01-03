@@ -2064,6 +2064,54 @@ document.addEventListener('DOMContentLoaded', () => {
         rawBtnClock.parentNode.replaceChild(btnClockAction, rawBtnClock);
 
         btnClockAction.addEventListener('click', () => {
+            // [Feature] Desktop / Laptop Direct Clock-In Bypassing Map
+            // Logic: If screen width > 768px (Non-mobile), skip map.
+            const isDesktop = window.innerWidth > 768;
+
+            if (isDesktop) {
+                // Direct Clock In for Desktop
+                appState.clockIn(appState.currentDate, appState.currentUser.id);
+
+                // UI Refresh Logic
+                const now = new Date();
+                const timeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
+
+                // Check if it was Clock IN or OUT
+                const todayStr = appState.formatDate(appState.currentDate);
+                const rec = appState.clockRecords[todayStr]?.[appState.currentUser.id];
+
+                if (rec && !rec.out) {
+                    // Clocked IN
+                    appState.addSegment(appState.currentDate, {
+                        type: 'office', // Default to office on desktop
+                        start: timeStr,
+                        end: '18:00',
+                        isAllDay: false,
+                        note: `打卡: 電腦版 (${timeStr})`
+                    });
+                    document.getElementById('clock-status-text').textContent = "上班中";
+                    document.getElementById('clock-status-text').style.color = "#059669";
+                    document.getElementById('clock-time-display').textContent = timeStr;
+                    btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
+                    btnClockAction.style.background = '#64748b';
+                    alert(`電腦版打卡成功！時間: ${timeStr}`);
+                } else {
+                    // Clocked OUT
+                    alert(`下班打卡成功！時間: ${timeStr}`);
+                    document.getElementById('clock-status-text').textContent = "已下班";
+                    btnClockAction.innerHTML = '<i class="fa-solid fa-stopwatch"></i> 上班';
+                    btnClockAction.style.background = '#3b82f6';
+                    // btnClockAction.style.display = 'none'; // Optional: hide or reset
+                    document.getElementById('clock-time-display').textContent = "--:--";
+                }
+
+                renderCalendar();
+                updateSidebar();
+                return;
+            }
+
+            // --- Mobile Flow (Map Required) ---
+
             // 1. Check Geolocation Support
             if (!navigator.geolocation) { alert('您的裝置不支援地理位置功能，無法使用打卡功能。'); return; }
 
