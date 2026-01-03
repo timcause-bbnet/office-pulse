@@ -2101,45 +2101,40 @@ document.addEventListener('DOMContentLoaded', () => {
                         confirmBtn.onclick = function () {
                             appState.clockIn(appState.currentDate, appState.currentUser.id);
 
-                            // UI Refresh Logic
-                            const todayStr = appState.formatDate(appState.currentDate);
-                            const rec = appState.clockRecords[todayStr]?.[appState.currentUser.id];
+                            // UI Refresh Logic - Force Success Display
+                            const now = new Date();
+                            const timeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
 
-                            if (rec && !rec.out) { // Just Clocked In
-                                const now = new Date();
-                                const timeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
+                            // Force Add Segment to ensure it shows up immediately
+                            appState.addSegment(appState.currentDate, {
+                                type: 'office',
+                                start: timeStr,
+                                end: '18:00',
+                                isAllDay: false,
+                                note: `打卡: ${matchedLoc.label}`
+                            });
 
-                                // Reset other user's office status today to avoid duplicates? No, just add own.
-                                // Logic: Add 'office' segment if not exists
-                                appState.addSegment(appState.currentDate, {
-                                    type: 'office',
-                                    start: timeStr,
-                                    end: '18:00',
-                                    isAllDay: false,
-                                    note: `打卡: ${matchedLoc.label}`
-                                });
+                            document.getElementById('clock-status-text').textContent = "上班中";
+                            document.getElementById('clock-status-text').style.color = "#059669";
+                            document.getElementById('clock-time-display').textContent = timeStr;
+                            btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
+                            btnClockAction.style.background = '#64748b';
 
-                                document.getElementById('clock-status-text').textContent = "上班中";
-                                document.getElementById('clock-status-text').style.color = "#059669";
-                                document.getElementById('clock-time-display').textContent = rec.in;
-                                btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
-                                btnClockAction.style.background = '#64748b';
-                                alert('打卡成功！');
-                            } else {
-                                // Clocked Out
-                                alert(`下班打卡成功！\n時間：${rec.out}`);
-                                document.getElementById('clock-status-text').textContent = "已下班";
-                                btnClockAction.style.display = 'none';
-                            }
+                            alert(`打卡成功！\n地點: ${matchedLoc.label}\n時間: ${timeStr}`);
 
                             mapModal.classList.remove('active');
                             renderCalendar();
-                            updateSidebar(); // Sync team list
+                            updateSidebar();
                         };
 
                     } else {
                         statusText.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> 位置不符！<br><span style="font-size:0.8rem">最近打卡點距離 ${Math.round(minDistance)} 公尺 (需 < 150)</span>`;
                         statusText.style.color = '#dc2626';
+
+                        // Disable Confirm Button explicitly
+                        confirmBtn.disabled = true;
+                        confirmBtn.style.opacity = '0.5';
+                        confirmBtn.onclick = null; // Prevent accidental clicks
                     }
                 },
                 (error) => {
