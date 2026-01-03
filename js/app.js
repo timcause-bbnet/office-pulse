@@ -776,43 +776,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const currentType = DOM.newFormState ? DOM.newFormState.type : 'office';
 
         // Meeting Input Visibility
-        const meetContainer = document.getElementById('meeting-inputs-container');
-        if (meetContainer) {
-            // STRICTLY show only if type is 'other' (Meeting)
-            meetContainer.style.display = (currentType === 'other') ? 'flex' : 'none';
-
-            // Populate Attendees if showing and empty
-            if (currentType === 'other') {
-                const list = document.getElementById('meet-attendees-list');
-                const checkAll = document.getElementById('meet-check-all');
-
-                if (list && list.children.length === 0) {
-                    const sortedUsers = [...appState.users].sort((a, b) => (a.department || '').localeCompare(b.department || ''));
-
-                    sortedUsers.forEach(u => {
-                        if (u.id === appState.currentUser.id) return;
-                        const div = document.createElement('div');
-                        div.style.width = "48%";
-                        div.className = 'check-group-item';
-                        div.style.marginBottom = '5px';
-                        div.innerHTML = `<label style="cursor:pointer; display:flex; align-items:center; gap:5px; font-size: 14px; color: #334155;"><input type="checkbox" value="${u.id}" class="meet-attendee-check" style="width:16px; height:16px;"> ${u.chiname || u.name}</label>`;
-                        list.appendChild(div);
-                    });
-
-                    if (checkAll) {
-                        checkAll.onclick = (e) => {
-                            const checks = list.querySelectorAll('.meet-attendee-check');
-                            checks.forEach(c => c.checked = e.target.checked);
-                        };
-                    }
-                }
-            }
-        }
-
-        if (DOM.sidebar.locationInput) {
-            DOM.sidebar.locationInput.style.display = (currentType === 'trip') ? 'flex' : 'none';
-        }
-
         if (appState.isBatchMode) {
             const titleText = `已選取 ${appState.multiSelectedDates.size} 天`;
             DOM.sidebar.headerH3.innerHTML = `我的狀態：<span class="highlight-text">${titleText}</span>`;
