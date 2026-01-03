@@ -2028,90 +2028,124 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- Clock In Logic with Geolocation ---
+    // --- Clock In Logic with Geolocation (Visual Map) ---
     const btnClockAction = document.getElementById('btn-clock-action');
     if (btnClockAction) {
         btnClockAction.addEventListener('click', () => {
-            // 1. Check Geolocation
+            // 1. Check Geolocation Support
             if (!navigator.geolocation) { alert('您的裝置不支援地理位置功能，無法使用打卡功能。'); return; }
 
-            const oldText = btnClockAction.innerHTML;
-            btnClockAction.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> 定位中...';
-            btnClockAction.disabled = true;
+            // Open Map Modal
+            const mapModal = document.getElementById('map-modal');
+            const mapFrame = document.getElementById('map-frame');
+            const statusText = document.getElementById('map-status-text');
+            const confirmBtn = document.getElementById('btn-confirm-clock');
+
+            mapModal.classList.add('active');
+            statusText.textContent = '🚀 正在獲取您的位置...';
+            statusText.style.color = '#334155';
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.5';
+            confirmBtn.onclick = null; // Reset previous listeners
+            mapFrame.src = 'about:blank'; // Reset frame
 
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const userLat = position.coords.latitude;
                     const userLng = position.coords.longitude;
 
+                    // Show Map (OpenStreetMap)
+                    mapFrame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${userLng - 0.005},${userLat - 0.005},${userLng + 0.005},${userLat + 0.005}&layer=mapnik&marker=${userLat},${userLng}`;
+
                     // 2. Check Distances
-                    let allowed = false;
                     let matchedLoc = null;
+                    let minDistance = 999999;
 
                     const u = appState.currentUser;
                     const locs = u.locations || [];
-
-                    // Get valid target locations
                     const targetLocs = locs.filter(l => l.lat && l.lng);
 
                     if (targetLocs.length === 0) {
-                        alert('您尚未設定打卡地點，請先至「設定 -> 編輯個人資料」新增地點。');
-                        btnClockAction.innerHTML = oldText; btnClockAction.disabled = false;
+                        statusText.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 您尚未設定打卡地點！<br><span style="font-size:0.8rem">請至設定頁面新增地點</span>';
+                        statusText.style.color = '#aa4a44';
                         return;
                     }
 
-                    // Distance Calculation (Haversine)
+                    // Haversine Calc
                     const getDistance = (lat1, lon1, lat2, lon2) => {
-                        const R = 6371e3; // metres
+                        const R = 6371e3;
                         const φ1 = lat1 * Math.PI / 180;
                         const φ2 = lat2 * Math.PI / 180;
                         const Δφ = (lat2 - lat1) * Math.PI / 180;
                         const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-                        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                            Math.cos(φ1) * Math.cos(φ2) *
-                            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+                        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
                         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
                         return R * c;
                     };
 
-                    for (const loc of targetLocs) {
+                    targetLocs.forEach(loc => {
                         const dist = getDistance(userLat, userLng, loc.lat, loc.lng);
-                        if (dist <= 150) { // 150 meters
-                            allowed = true;
-                            matchedLoc = loc;
-                            break;
-                        }
-                    }
+                        if (dist < minDistance) minDistance = dist;
+                        if (dist <= 150) matchedLoc = loc;
+                    });
 
-                    btnClockAction.innerHTML = oldText; btnClockAction.disabled = false;
+                    if (matchedLoc) {
+                        statusText.innerHTML = `<i class="fa-solid fa-circle-check"></i> 確認位置：${matchedLoc.label}<br><span style="font-size:0.8rem; color:#059669;">距離 ${Math.round(minDistance)} 公尺 (符合)</span>`;
+                        statusText.style.color = '#059669';
 
-                    if (allowed) {
-                        // 3. Success -> Clock In
-                        const now = new Date();
-                        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+                        // Enable Confirm Button
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
 
-                        const seg = {
-                            type: 'office',
-                            detail: matchedLoc.label || 'Office',
-                            note: `打卡 (${timeStr}) - ${matchedLoc.addr || ''}`,
-                            isAllDay: false,
-                            start: timeStr,
-                            end: '18:00',
-                            id: Date.now() + Math.random()
+                        // Bind Confirm Action
+                        confirmBtn.onclick = function () {
+                            appState.clockIn(appState.currentDate, appState.currentUser.id);
+
+                            // UI Refresh Logic
+                            const todayStr = appState.formatDate(appState.currentDate);
+                            const rec = appState.clockRecords[todayStr]?.[appState.currentUser.id];
+
+                            if (rec && !rec.out) { // Just Clocked In
+                                const now = new Date();
+                                const timeStr = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0');
+
+                                // Reset other user's office status today to avoid duplicates? No, just add own.
+                                // Logic: Add 'office' segment if not exists
+                                appState.addSegment(appState.currentDate, {
+                                    type: 'office',
+                                    start: timeStr,
+                                    end: '18:00',
+                                    isAllDay: false,
+                                    note: `打卡: ${matchedLoc.label}`
+                                });
+
+                                document.getElementById('clock-status-text').textContent = "上班中";
+                                document.getElementById('clock-status-text').style.color = "#059669";
+                                document.getElementById('clock-time-display').textContent = rec.in;
+                                btnClockAction.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> 下班';
+                                btnClockAction.style.background = '#64748b';
+                                alert('打卡成功！');
+                            } else {
+                                // Clocked Out
+                                alert(`下班打卡成功！\n時間：${rec.out}`);
+                                document.getElementById('clock-status-text').textContent = "已下班";
+                                btnClockAction.style.display = 'none';
+                            }
+
+                            mapModal.classList.remove('active');
+                            renderCalendar();
+                            updateSidebar(); // Sync team list
                         };
 
-                        appState.addSegment(now, seg);
-                        alert(`打卡成功！\n地點: ${matchedLoc.label}\n時間: ${timeStr}`);
-                        renderCalendar(); updateSidebar();
                     } else {
-                        alert(`打卡失敗：您不在任何打卡地點的 150 公尺範圍內。\n目前位置: ${userLat.toFixed(5)}, ${userLng.toFixed(5)}`);
+                        statusText.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> 位置不符！<br><span style="font-size:0.8rem">最近打卡點距離 ${Math.round(minDistance)} 公尺 (需 < 150)</span>`;
+                        statusText.style.color = '#dc2626';
                     }
                 },
-                (err) => {
-                    console.error(err);
-                    alert('無法取得定位，請確認已授權瀏覽器及此網站存取位置。\n錯誤代碼: ' + err.code);
-                    btnClockAction.innerHTML = oldText; btnClockAction.disabled = false;
+                (error) => {
+                    statusText.textContent = '❌ 無法獲取位置：' + error.message;
+                    statusText.style.color = '#dc2626';
+                    console.error(error);
                 },
                 { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
