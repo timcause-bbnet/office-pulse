@@ -3059,6 +3059,31 @@ document.addEventListener('DOMContentLoaded', () => {
         input.value = `${y}-${m}`;
     };
 
+    // --- Login Logic (Restored) ---
+    if (DOM.loginForm) {
+        DOM.loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const username = DOM.usernameInput.value;
+            const password = DOM.loginPasswordInput.value;
+
+            if (appState.login(username, password)) {
+                switchScreen('dashboard');
+                renderDashboard();
+            } else {
+                alert('登入失敗，請檢查帳號密碼 (預設: Alex / 123)');
+                DOM.loginForm.classList.add('shake');
+                setTimeout(() => DOM.loginForm.classList.remove('shake'), 500);
+            }
+        });
+    }
+
+    // Logout Logic
+    if (DOM.userDisplay.logoutBtn) {
+        DOM.userDisplay.logoutBtn.addEventListener('click', () => {
+            appState.logout();
+        });
+    }
+
     // Perpetual Calendar Listeners
     if (DOM.calendar.yearSelect) {
         DOM.calendar.yearSelect.addEventListener('change', (e) => {
