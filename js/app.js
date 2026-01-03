@@ -90,6 +90,34 @@ class AppState {
                 if (data.clock) this.clockRecords = data.clock || {};
                 if (data.applications) this.applications = data.applications || [];
 
+                // [TEMPORARY ADMIN FIX] Clear specific users for today
+                if (!window.hasAdminFixRun && this.users) {
+                    const todayKey = this.formatDate(new Date());
+                    let hasChange = false;
+
+                    // 1. Brian (Exact match)
+                    const uBrian = this.users.find(u => u.username === 'Brian');
+                    if (uBrian && this.clockRecords[todayKey] && this.clockRecords[todayKey][uBrian.id]) {
+                        delete this.clockRecords[todayKey][uBrian.id];
+                        hasChange = true;
+                        console.log("🛠️ Admin Fix: Cleared Brian's record");
+                    }
+
+                    // 2. bb (Fuzzy match)
+                    const uBB = this.users.find(u => u.username.toLowerCase() === 'bb' || (u.nickname && u.nickname.toLowerCase() === 'bb'));
+                    if (uBB && this.clockRecords[todayKey] && this.clockRecords[todayKey][uBB.id]) {
+                        delete this.clockRecords[todayKey][uBB.id];
+                        hasChange = true;
+                        console.log("🛠️ Admin Fix: Cleared bb's record");
+                    }
+
+                    if (hasChange) {
+                        this.syncToServer();
+                        // alert('系統維護：已自動清除 Brian 與 bb 今日的異常打卡資料。');
+                    }
+                    window.hasAdminFixRun = true;
+                }
+
                 // Ensure Admin
                 this.users.forEach(u => {
                     if (u.username === 'Brian') u.permissions = { approve: true, schedule: true, manageUser: true, superAdmin: true };
