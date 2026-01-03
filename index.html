@@ -23,17 +23,45 @@
         /* Mobile Specific Overrides in HTML to ensure highest priority */
         @media (max-width: 768px) {
 
+            /* --- Mobile Scroll Fix --- */
             html,
             body {
                 height: 100%;
-                overflow: hidden;
-                /* Prevent body scroll on splash/login */
+                overflow-x: hidden;
+                overflow-y: hidden;
+                /* Prevent double scrollbars, let #app handle it */
             }
 
             #app {
                 height: 100%;
                 overflow-y: auto;
-                /* Allow app internal scrolling */
+                /* Main scroller */
+                -webkit-overflow-scrolling: touch;
+                /* Smooth scroll */
+            }
+
+            /* Unset fixed heights to allow natural flow scrolling */
+            .dashboard-grid {
+                display: flex !important;
+                flex-direction: column;
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+                padding-bottom: 50px;
+                /* Space for bottom content */
+            }
+
+            .sidebar-section {
+                height: auto !important;
+                max-height: none !important;
+                overflow: visible !important;
+            }
+
+            /* Force full width on layout items */
+            .calendar-section,
+            .sidebar-section {
+                width: 100% !important;
+                flex-shrink: 0;
             }
 
             #login-screen {
