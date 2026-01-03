@@ -13,6 +13,51 @@
     <link rel="stylesheet" href="css/settings_style.css">
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Mobile Specific Overrides in HTML to ensure highest priority */
+        @media (max-width: 768px) {
+
+            html,
+            body {
+                height: 100%;
+                overflow: hidden;
+                /* Prevent body scroll on splash/login */
+            }
+
+            #app {
+                height: 100%;
+                overflow-y: auto;
+                /* Allow app internal scrolling */
+            }
+
+            #login-screen {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                z-index: 9999;
+                display: flex !important;
+                /* Force flex for centering */
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                background: #f8fafc;
+                /* Solid background to cover messy content */
+            }
+
+            #login-screen:not(.active) {
+                display: none !important;
+            }
+
+            .login-panel {
+                background: white;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                border-radius: 16px;
+                width: 90%;
+            }
+        }
+    </style>
 </head>
 
 <body>
